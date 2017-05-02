@@ -1,0 +1,25 @@
+PSCI library from ARM-TrustedFirmware imported into OP-TEE
+----------------------------------------------------------
+
+$ATF/include/lib/psci/psci.h		$OPTEE/core/arch/arm/include/libpsci/psci.h
+$ATF/lib/psci/aarch32/psci_helpers.S	$OPTEE/core/arch/arm/libpsci/psci/aarch32/psci_helpers.S
+$ATF/lib/psci/psci_common.c		$OPTEE/core/arch/arm/libpsci/psci/psci_common.c
+$ATF/lib/psci/psci_main.c		$OPTEE/core/arch/arm/libpsci/psci/psci_main.c
+$ATF/lib/psci/psci_off.c		$OPTEE/core/arch/arm/libpsci/psci/psci_off.c
+$ATF/lib/psci/psci_on.c			$OPTEE/core/arch/arm/libpsci/psci/psci_on.c
+$ATF/lib/psci/psci_private.h		$OPTEE/core/arch/arm/libpsci/psci/psci_private.h
+$ATF/lib/psci/psci_setup.c		$OPTEE/core/arch/arm/libpsci/psci/psci_setup.c
+$ATF/lib/psci/psci_stat.c		$OPTEE/core/arch/arm/libpsci/psci/psci_stat.c
+$ATF/lib/psci/psci_suspend.c		$OPTEE/core/arch/arm/libpsci/psci/psci_suspend.c
+$ATF/lib/psci/psci_system_off.c		$OPTEE/core/arch/arm/libpsci/psci/psci_system_off.c
+
+$ATF/plat/common/plat_psci_common.c	$OPTEE/core/arch/arm/libpsci/platform_stubs/plat_psci_common.c
+					TODO: move to $OPTEE/core/arch/arm/libpsci/psci/plat_psci_common.c
+
+$ATF/include/lib/bakery_lock.h			$OPTEE/core/arch/arm/include/libpsci/bakery_lock.h
+$ATF/lib/locks/bakery/bakery_lock_coherent.c	$OPTEE/core/arch/arm/libpsci/lock_bakery/bakery_lock_coherent.c
+
+$ATF/include/lib/el3_runtime/cpu_data.h	$OPTEE/core/arch/arm/include/libpsci/cpu_data.h
+$ATF/lib/el3_runtime/aarch32/cpu_data.S	$OPTEE/core/arch/arm/libpsci/cpu_data/aarch32/cpu_data.S
+$ATF/lib/el3_runtime/cpu_data_array.c	$OPTEE/core/arch/arm/libpsci/cpu_data/cpu_data_array.c
+
