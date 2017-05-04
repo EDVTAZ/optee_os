@@ -869,6 +869,20 @@ static void init_sec_mon(size_t pos __maybe_unused)
 #endif
 }
 
+#if defined(CFG_ATF_PSCI_ARM32)
+vaddr_t optee_get_tmp_stack_top(void)
+{
+	size_t pos = get_core_pos();
+
+	return GET_STACK(stack_tmp[pos]);
+}
+
+size_t optee_get_tmp_stack_size(void)
+{
+	return STACK_TMP_SIZE;
+}
+#endif
+
 void thread_init_per_cpu(void)
 {
 	size_t pos = get_core_pos();

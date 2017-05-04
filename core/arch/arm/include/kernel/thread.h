@@ -570,6 +570,10 @@ void thread_rpc_free_payload(uint64_t cookie, struct mobj *mobj);
 uint32_t thread_rpc_cmd(uint32_t cmd, size_t num_params,
 		struct optee_msg_param *params);
 
+/* Get tmp stack location and size */
+size_t optee_get_tmp_stack_size(void);
+vaddr_t optee_get_tmp_stack_top(void);
+
 #endif /*ASM*/
 
 #endif /*KERNEL_THREAD_H*/
