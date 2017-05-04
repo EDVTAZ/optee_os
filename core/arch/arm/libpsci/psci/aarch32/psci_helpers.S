@@ -131,6 +131,11 @@ FUNC do_stack_maintenance , :
 	push	{r4, lr}
 	bl	plat_get_my_stack
 
+	mov	r4, r0
+	bl	plat_get_my_stack_size
+	mov	r5, r0
+
+
 	/* Turn off the D-cache */
 	read_sctlr r1			@ ldcopr	r1, SCTLR
 	bic	r1, #SCTLR_C_BIT
@@ -142,7 +147,6 @@ FUNC do_stack_maintenance , :
 	 * stack memory in r1.
 	 * ---------------------------------------------
 	 */
-	mov	r4, r0
 	mov	r1, sp
 	sub	r1, r0, r1
 	mov	r0, sp
@@ -154,7 +158,7 @@ FUNC do_stack_maintenance , :
 	 * stack base address in r0.
 	 * ---------------------------------------------
 	 */
-	sub	r0, r4, #PLATFORM_STACK_SIZE
+	sub	r0, r4, r5
 	sub	r1, sp, r0
 	bl	inv_dcache_range
 
