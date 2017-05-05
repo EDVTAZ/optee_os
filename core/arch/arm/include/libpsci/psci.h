@@ -89,11 +89,11 @@
 
 /*
  * Number of PSCI calls (above) implemented
+ * PSCI_NUM_CALLS is defined in sm/psci.h
+ * PSCI v1.0 define 18 + 4 for PSCI_STAT support.
  */
-#if ENABLE_PSCI_STAT
-#define PSCI_NUM_CALLS			22
-#else
-#define PSCI_NUM_CALLS			18
+#if ENABLE_PSCI_STAT && (PSCI_NUM_CALLS != 22)
+#error ENABLE_PSCI_STAT support requires 4 more PSCI_NUM_CALLS
 #endif
 
 /* The macros below are used to identify PSCI calls from the SMC function ID */
