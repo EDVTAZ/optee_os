@@ -322,6 +322,8 @@ void psci_cpu_suspend_finish(unsigned int cpu_idx __maybe_unused,
 	 * Generic management: Now we just need to retrieve the
 	 * information that we had stashed away during the suspend
 	 * call to set this cpu on its way.
+	 * => OP-TEE secure monitor will handle this. This function should
+	 * return the generic_entry_a32.S at a point where optee inits will
+	 * be completed and secure monitor will be called.
 	 */
-	cm_prepare_el3_exit(NON_SECURE);
 }

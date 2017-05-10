@@ -35,14 +35,6 @@
 
 #include "psci_private.h"
 
-/*******************************************************************************
- * Per cpu non-secure contexts used to program the architectural state prior
- * return to the normal world.
- * TODO: Use the memory allocator to set aside memory for the contexts instead
- * of relying on platform defined constants.
- ******************************************************************************/
-static cpu_context_t psci_ns_context[PLATFORM_CORE_COUNT];
-
 /******************************************************************************
  * Define the psci capability variable.
  *****************************************************************************/
@@ -85,9 +77,6 @@ static void psci_init_pwr_domain_node(unsigned int node_idx,
 		psci_flush_dcache_range((uintptr_t)svc_cpu_data,
 						 sizeof(*svc_cpu_data));
 
-		cm_set_context_by_index(node_idx,
-					(void *) &psci_ns_context[node_idx],
-					NON_SECURE);
 	}
 }
 
