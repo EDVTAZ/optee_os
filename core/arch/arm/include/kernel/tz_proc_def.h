@@ -29,13 +29,6 @@
  */
 
 /*
- * CP15 Multiprocessor Affinity register (MPIDR)
- */
-#define CP15_CONFIG_CPU_ID_MASK   0x00000003
-#define CPU_ID0    0x00000000
-#define CPU_ID1    0x00000001
-
-/*
  * CP15 Secure configuration register
  */
 #define CP15_CONFIG_NS_MASK   0x00000001
