@@ -351,11 +351,33 @@ static inline uint32_t read_ifsr(void)
 	return ifsr;
 }
 
+static inline uint32_t read_scr(void)
+{
+	uint32_t scr;
+
+	asm volatile ("mrc	p15, 0, %[scr], c1, c1, 0"
+			: [scr] "=r" (scr)
+	);
+
+	return scr;
+}
+
 static inline void write_scr(uint32_t scr)
 {
 	asm volatile ("mcr	p15, 0, %[scr], c1, c1, 0"
 			: : [scr] "r" (scr)
 	);
+}
+
+static inline uint32_t read_isr(void)
+{
+	uint32_t isr;
+
+	asm volatile ("mrc	p15, 0, %[isr], c12, c1, 0"
+			: [isr] "=r" (isr)
+	);
+
+	return isr;
 }
 
 static inline void isb(void)
@@ -381,6 +403,11 @@ static inline void sev(void)
 static inline void wfe(void)
 {
 	asm volatile ("wfe");
+}
+
+static inline void wfi(void)
+{
+	asm volatile ("wfi");
 }
 
 /* Address translate privileged write translation (current state secure PL1) */
@@ -538,6 +565,24 @@ static inline void write_nsacr(uint32_t nsacr)
 {
 	asm volatile ("mcr	p15, 0, %[nsacr], c1, c1, 2"
 			: : [nsacr] "r" (nsacr)
+	);
+}
+
+static inline uint32_t read_hsctlr(void)
+{
+	uint32_t hsctlr;
+
+	asm volatile ("mrc	p15, 4, %[hsctlr], c1, c0, 0"
+			: [hsctlr] "=r" (hsctlr)
+	);
+
+	return hsctlr;
+}
+
+static inline void write_hsctlr(uint32_t hsctlr)
+{
+	asm volatile ("mcr	p15, 4, %[hsctlr], c1, c0, 0"
+			: : [hsctlr] "r" (hsctlr)
 	);
 }
 
