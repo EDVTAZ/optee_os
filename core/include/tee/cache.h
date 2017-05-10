@@ -27,6 +27,7 @@
 #ifndef TEE_CACHE_H
 #define TEE_CACHE_H
 
+#include <tee_api_types.h>
 #include <utee_types.h>
 
 TEE_Result cache_operation(enum utee_cache_operation op, void *va, size_t len);
