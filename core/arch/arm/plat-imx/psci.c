@@ -58,7 +58,7 @@ int psci_cpu_on(uint32_t core_idx, uint32_t entry,
 		return PSCI_RET_INVALID_PARAMETERS;
 
 	/* set secondary cores' NS entry addresses */
-	ns_entry_addrs[core_idx] = entry;
+	plat_store_ns_entrypoint(core_idx, entry);
 
 	if (soc_is_imx7ds()) {
 		write32((uint32_t)CFG_TEE_LOAD_ADDR,

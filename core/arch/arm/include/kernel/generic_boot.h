@@ -59,6 +59,7 @@ void arm_cl2_enable(vaddr_t pl310);
 extern paddr_t ns_entry_addrs[];
 int generic_boot_core_release(size_t core_idx, paddr_t entry);
 paddr_t generic_boot_core_hpen(void);
+void plat_store_ns_entrypoint(size_t core_idx, paddr_t entry);
 #endif
 
 #endif /* KERNEL_GENERIC_BOOT_H */
