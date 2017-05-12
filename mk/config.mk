@@ -204,7 +204,9 @@ CFG_TEE_CORE_EMBED_INTERNAL_TESTS ?= y
 # This option enables OP-TEE to respond to SMP boot request: the Rich OS
 # issues this to request OP-TEE to release secondaries cores out of reset,
 # with specific core number and non-secure entry address.
+ifneq ($(CFG_ATF_PSCI_ARM32),y)
 CFG_BOOT_SECONDARY_REQUEST ?= n
+endif
 
 # Default heap size for Core, 64 kB
 CFG_CORE_HEAP_SIZE ?= 65536

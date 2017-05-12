@@ -45,6 +45,7 @@
 #define SCTLR_C_BIT	SCTLR_C
 
 #ifndef __ASSEMBLY__
+#include <kernel/generic_boot.h>
 #include <kernel/panic.h>
 #include <kernel/spinlock.h>
 #include <sm/optee_smc.h>
@@ -86,6 +87,12 @@
 
 typedef unsigned int u_register_t;
 typedef unsigned int spinlock_t;
+typedef paddr_t entry_point_info_t;
+
+static inline paddr_t epinfo2ep(entry_point_info_t *ep)
+{
+	return (paddr_t)*ep;
+}
 
 #include <libpsci/platform_apis.h>
 

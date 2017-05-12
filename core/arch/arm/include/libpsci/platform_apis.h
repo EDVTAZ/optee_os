@@ -39,7 +39,7 @@
 /*
  * Mandatory PSCI functions
  */
-int plat_setup_psci_ops(uintptr_t sec_entrypoint,
+int plat_setup_psci_ops(paddr_t sec_entrypoint,
 			const struct plat_psci_ops **psci_ops);
 
 const unsigned char *plat_get_power_domain_tree_desc(void);
