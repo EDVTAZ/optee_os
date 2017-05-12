@@ -100,7 +100,7 @@ static void psci_suspend_to_pwrdown_start(unsigned int end_pwrlvl,
 	/*
 	 * Store the re-entry information for the non-secure world.
 	 */
-	cm_init_my_context(ep);
+	plat_store_ns_entrypoint(epinfo2ep(ep), plat_my_core_pos());
 
 #if ENABLE_RUNTIME_INSTRUMENTATION
 

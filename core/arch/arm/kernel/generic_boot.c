@@ -638,12 +638,19 @@ void generic_boot_init_secondary(unsigned long nsec_entry)
 #endif
 
 #if defined(CFG_BOOT_SECONDARY_REQUEST)
+__weak void plat_store_ns_entrypoint(size_t core_idx, paddr_t entry)
+{
+	assert(core_idx < CFG_TEE_CORE_NB_CORE);
+
+	ns_entry_addrs[core_idx] = entry;
+}
+
 int generic_boot_core_release(size_t core_idx, paddr_t entry)
 {
 	if (!core_idx || core_idx >= CFG_TEE_CORE_NB_CORE)
 		return -1;
 
-	ns_entry_addrs[core_idx] = entry;
+	plat_store_ns_entrypoint(core_idx, entry);
 	dmb();
 	spin_table[core_idx] = 1;
 	dsb();

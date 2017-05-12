@@ -54,7 +54,7 @@ int psci_cpu_on(uint32_t core_idx, uint32_t entry,
 		return PSCI_RET_INVALID_PARAMETERS;
 
 	/* set secondary cores' NS entry addresses */
-	ns_entry_addrs[core_idx] = entry;
+	plat_store_ns_entrypoint(core_idx, entry);
 
 	/* boot secondary cores from OP-TEE load address */
 	write32((uint32_t)CFG_TEE_LOAD_ADDR, va + SRC_GPR1 + core_idx * 8);

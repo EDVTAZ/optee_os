@@ -58,6 +58,7 @@ endif
 
 ifeq ($(CFG_ATF_PSCI_ARM32),y)
 $(call force,CFG_PSCI_ARM32,y)
+$(call force,CFG_BOOT_SECONDARY_REQUEST,y)
 core-platform-subdirs += $(arch-dir)/libpsci
 endif
 

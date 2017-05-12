@@ -609,6 +609,20 @@ int psci_validate_mpidr(u_register_t mpidr)
 	return PSCI_E_SUCCESS;
 }
 
+#if 1
+/*******************************************************************************
+ * This function validates the entrypoint with the platform layer if the
+ * appropriate pm_ops hook is exported by the platform and returns the
+ * 'entry_point_info'.
+ ******************************************************************************/
+int psci_validate_entry_point(entry_point_info_t *ep,
+			      uintptr_t entrypoint,
+			      u_register_t context_id __unused)
+{
+	*ep = entrypoint;
+	return PSCI_E_SUCCESS;
+}
+#else
 /*******************************************************************************
  * This function determines the full entrypoint information for the requested
  * PSCI entrypoint on power on/resume and returns it.
@@ -742,6 +756,7 @@ int psci_validate_entry_point(entry_point_info_t *ep,
 	rc = psci_get_ns_ep_info(ep, entrypoint, context_id);
 	return rc;
 }
+#endif
 
 /*******************************************************************************
  * Generic handler which is called when a cpu is physically powered on. It
