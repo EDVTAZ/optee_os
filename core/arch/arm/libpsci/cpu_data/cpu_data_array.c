@@ -34,3 +34,21 @@
 
 /* The per_cpu_ptr_cache_t space allocation */
 cpu_data_t percpu_data[PLATFORM_CORE_COUNT];
+
+void arch_cpu_power_down(void);
+void arch_cluster_power_down(void);
+
+// TODO: prepare_cpu_pwr_dwn() is declared in psci_private.h, hence
+// the routine should be implemented from libpsci/psci/xxx.c
+void prepare_cpu_pwr_dwn(unsigned int power_level);
+
+void prepare_cpu_pwr_dwn(unsigned int power_level)
+{
+	if (power_level == PSCI_CPU_PWR_LVL)
+		panic();
+
+	if (power_level >= PLAT_MAX_PWR_LVL)
+		arch_cluster_power_down();
+	else
+		arch_cpu_power_down();
+}
