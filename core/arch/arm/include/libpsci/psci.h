@@ -396,19 +396,9 @@ typedef struct psci_lib_args {
 /******************************************************************************
  * PSCI Library Interfaces
  *****************************************************************************/
-u_register_t psci_smc_handler(uint32_t smc_fid,
-			  u_register_t x1,
-			  u_register_t x2,
-			  u_register_t x3,
-			  u_register_t x4,
-			  void *cookie,
-			  void *handle,
-			  u_register_t flags);
 int psci_setup(const psci_lib_args_t *lib_args);
 void psci_warmboot_entrypoint(void);
 void psci_register_spd_pm_hook(const spd_pm_ops_t *pm);
-void psci_prepare_next_non_secure_ctx(
-			  entry_point_info_t *next_image_info);
 
 #endif /*__ASSEMBLY__*/
 
