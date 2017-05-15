@@ -28,16 +28,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arch.h>
-#include <arch_helpers.h>
 #include <assert.h>
-#include <bl_common.h>
-#include <context.h>
-#include <context_mgmt.h>
-#include <debug.h>
-#include <platform.h>
+#include <libpsci/cpu_data.h>
+#include <libpsci/libpsci_optee.h>
 #include <string.h>
-#include <utils.h>
+#include <util.h>		/* utils.h */
+
 #include "psci_private.h"
 
 /*
@@ -356,7 +352,7 @@ void psci_get_parent_pwr_domain_nodes(unsigned int cpu_idx,
 				      unsigned int node_index[])
 {
 	unsigned int parent_node = psci_cpu_pd_nodes[cpu_idx].parent_node;
-	int i;
+	unsigned int i;
 
 	for (i = PSCI_CPU_PWR_LVL + 1; i <= end_lvl; i++) {
 		*node_index++ = parent_node;

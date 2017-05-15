@@ -28,15 +28,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arch.h>
-#include <arch_helpers.h>
 #include <assert.h>
-#include <debug.h>
-#include <platform.h>
-#include <pmf.h>
-#include <runtime_instr.h>
-#include <smcc.h>
+#include <libpsci/cpu_data.h>
+#include <libpsci/libpsci_optee.h>
 #include <string.h>
+
 #include "psci_private.h"
 
 /*******************************************************************************
@@ -241,7 +237,7 @@ int psci_affinity_info(u_register_t target_affinity,
 
 	/* Calculate the cpu index of the target */
 	target_idx = plat_core_pos_by_mpidr(target_affinity);
-	if (target_idx == -1)
+	if (target_idx == -1U)
 		return PSCI_E_INVALID_PARAMS;
 
 	return psci_get_aff_info_state_by_idx(target_idx);

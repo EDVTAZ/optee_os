@@ -31,6 +31,8 @@
 #ifndef __CPU_DATA_H__
 #define __CPU_DATA_H__
 
+#include <libpsci/libpsci_optee.h>
+
 #ifdef AARCH32
 
 #if CRASH_REPORTING
@@ -70,10 +72,7 @@
 
 #ifndef __ASSEMBLY__
 
-#include <arch_helpers.h>
-#include <cassert.h>
-#include <platform_def.h>
-#include <psci.h>
+#include <libpsci/psci.h>
 #include <stdint.h>
 
 /* Offsets for the cpu_data structure */

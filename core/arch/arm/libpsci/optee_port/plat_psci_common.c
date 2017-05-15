@@ -28,11 +28,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arch.h>
-#include <assert.h>
-#include <platform.h>
-#include <pmf.h>
-#include <psci.h>
+#include <libpsci/libpsci_optee.h>
+#include <libpsci/psci.h>
 
 #if ENABLE_PSCI_STAT && ENABLE_PMF
 #pragma weak plat_psci_stat_accounting_start
@@ -162,7 +159,7 @@ u_register_t plat_psci_stat_get_residency(unsigned int lvl,
  * coordinated target local power state for a power domain will be the minimum
  * of the requested local power states.
  */
-plat_local_state_t plat_get_target_pwr_state(unsigned int lvl,
+plat_local_state_t plat_get_target_pwr_state(unsigned int lvl __maybe_unused,
 					     const plat_local_state_t *states,
 					     unsigned int ncpu)
 {

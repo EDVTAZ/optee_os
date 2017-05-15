@@ -29,9 +29,8 @@
  */
 
 #include <assert.h>
-#include <debug.h>
-#include <platform.h>
-#include <platform_def.h>
+#include <libpsci/libpsci_optee.h>
+
 #include "psci_private.h"
 
 #ifndef PLAT_MAX_PWR_LVL_STATES
@@ -96,7 +95,9 @@ static int get_stat_idx(plat_local_state_t local_state, int pwr_lvl)
 void psci_stats_update_pwr_down(unsigned int end_pwrlvl,
 			const psci_power_state_t *state_info)
 {
-	int lvl, parent_idx, cpu_idx = plat_my_core_pos();
+	unsigned int lvl;
+	unsigned int parent_idx;
+	unsigned int cpu_idx = plat_my_core_pos();
 
 	assert(end_pwrlvl <= PLAT_MAX_PWR_LVL);
 	assert(state_info);
@@ -128,8 +129,10 @@ void psci_stats_update_pwr_down(unsigned int end_pwrlvl,
 void psci_stats_update_pwr_up(unsigned int end_pwrlvl,
 			const psci_power_state_t *state_info)
 {
-	int parent_idx, cpu_idx = plat_my_core_pos();
-	int lvl, stat_idx;
+	unsigned int parent_idx;
+	unsigned int cpu_idx = plat_my_core_pos();
+	unsigned int lvl;
+	unsigned int stat_idx;
 	plat_local_state_t local_state;
 	u_register_t residency;
 
@@ -186,7 +189,7 @@ void psci_stats_update_pwr_up(unsigned int end_pwrlvl,
  * local state for the highest power level expressed in the `power_state`
  * for the node represented by `target_cpu`.
  ******************************************************************************/
-int psci_get_stat(u_register_t target_cpu, unsigned int power_state,
+static int psci_get_stat(u_register_t target_cpu, unsigned int power_state,
 			 psci_stat_t *psci_stat)
 {
 	int rc, pwrlvl, lvl, parent_idx, stat_idx, target_idx;

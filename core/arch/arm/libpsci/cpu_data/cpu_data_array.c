@@ -28,9 +28,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cassert.h>
-#include <cpu_data.h>
-#include <platform_def.h>
+#include <libpsci/cpu_data.h>
+#include <libpsci/libpsci_optee.h>
 
 /* The per_cpu_ptr_cache_t space allocation */
 cpu_data_t percpu_data[PLATFORM_CORE_COUNT];
