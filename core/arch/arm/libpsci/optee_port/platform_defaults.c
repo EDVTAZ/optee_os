@@ -98,6 +98,28 @@ __weak int plat_validate_mpidr(u_register_t mpidr)
 #endif /* PSCI_PLATFORM_SYSTEM_COUNT */
 
 /*
+ * Weak support for retrieving CNTFRQ configuration:
+ * - primary boot core expects earlier boot stage loaded it.
+ * - secondary boot cores get the value saved in RAM by primary core.
+ */
+static uint32_t shared_cntfrq __coherent_ram;
+
+__weak unsigned int plat_get_syscnt_freq2(void)
+{
+	uint32_t cntfrq;
+
+	if (!plat_my_core_pos()) {
+		/* Assume early boot stage has set CNTFRQ */
+		cntfrq = read_cntfrq();
+		shared_cntfrq = cntfrq;
+	} else {
+		/* read CNTFRQ value from coherent RAM */
+		cntfrq = shared_cntfrq;
+	}
+	return (unsigned int)cntfrq;
+}
+
+/*
  * Platform sequences for power sequence
  * -------------------------------------
  *
