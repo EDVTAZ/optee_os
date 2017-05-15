@@ -65,6 +65,8 @@ plat_local_state_t plat_get_target_pwr_state(unsigned int lvl,
 void plat_def_cpu_standby(plat_local_state_t cpu_state);
 int plat_def_pwr_domain_on(u_register_t mpidr);
 
+unsigned int plat_get_syscnt_freq2(void);
+
 #endif /* __ASSEMBLY__ */
 
 #endif /* LIBPSCI_PLATFORM_APIS_H */

@@ -95,6 +95,24 @@ int plat_core_pos_by_mpidr(u_register_t mpidr)
 	return get_core_pos_by_mpidr(mpidr);
 }
 
+uint32_t shared_cntfrq __coherent_ram;
+
+__weak unsigned int plat_get_syscnt_freq2(void)
+{
+	uint32_t cntfrq;
+
+	if (!plat_my_core_pos()) {
+		/* Assume early boot stage has set CNTFRQ */
+		cntfrq = read_cntfrq();
+		shared_cntfrq = cntfrq;
+	} else {
+		/* read CNTFRQ value from coherent RAM */
+		cntfrq = shared_cntfrq;
+	}
+	return (unsigned int)cntfrq;
+}
+
+
 /*******************************************************************************
  * TEE power handlers called from PSCI sequence through the registered structure
  * struct spd_pm_ops. They to be given a chance to perform any OPTEE bookkeeping
