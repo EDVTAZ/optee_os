@@ -40,6 +40,7 @@ unsigned long generic_boot_cpu_on_handler(unsigned long a0, unsigned long a1);
 void generic_boot_init_primary(unsigned long pageable_part,
 			       unsigned long nsec_entry, unsigned long fdt);
 void generic_boot_init_secondary(unsigned long nsec_entry);
+void warmboot_entrypoint(void);
 #endif
 
 void main_init_gic(void);
