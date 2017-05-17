@@ -536,4 +536,50 @@ UNWIND(	.cantunwind)
 	b	.	/* SMC should not return */
 UNWIND(	.fnend)
 END_FUNC reset_secondary
+
+#if defined(CFG_ATF_PSCI_ARM32)
+FUNC warmboot_entrypoint , :
+UNWIND(	.fnstart)
+UNWIND(	.cantunwind)
+
+	read_sctlr r0
+	orr	r0, r0, #SCTLR_A
+	write_sctlr r0
+
+	ldr	r0, =_start
+	write_vbar r0
+
+	set_sp
+
+	bl	plat_cpu_reset_late
+
+	bl	core_init_mmu_regs
+	bl	cpu_mmu_enable
+
+	bl	psci_warmboot_entrypoint
+
+	bl	arm_cl1_d_invbysetway
+	bl	cpu_mmu_enable_icache
+	bl	cpu_mmu_enable_dcache
+
+	/*
+	 * get NS entrypoint and call "init_secondary" both primary and
+	 * secondary boot cores.
+	 */
+	bl	generic_boot_core_hpen
+	bl	generic_boot_init_secondary
+
+	mov	r0, #TEESMC_OPTEED_RETURN_ENTRY_DONE
+	mov	r1, #0
+	mov	r2, #0
+	mov	r3, #0
+	mov	r4, #0
+	smc	#0
+	b	.	/* SMC should not return */
+UNWIND(	.fnend)
+END_FUNC warmboot_entrypoint
+KEEP_PAGER warmboot_entrypoint
+
+#endif /* CFG_ATF_PSCI_ARM32 */
+
 #endif /* defined(CFG_WITH_ARM_TRUSTED_FW) */
