@@ -60,6 +60,7 @@ OUTPUT_ARCH(CFG_KERN_LINKER_ARCH)
 		ASSERT(!(. & (4096 - 1)),		\
 			"Coherent memory start is not aligned");\
 		__coherent_start = .;			\
+		KEEP(*(.plat_coherent_structure));	\
 		KEEP(*(.coherent_ram));			\
 		. = ALIGN(4096);			\
 		__coherent_end = .;			\
