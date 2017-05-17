@@ -3,6 +3,7 @@ CFG_LTC_OPTEE_THREAD ?= y
 # Only applicable when paging is enabled.
 CFG_CORE_TZSRAM_EMUL_SIZE ?= 368640
 CFG_LPAE_ADDR_SPACE_SIZE ?= (1ull << 32)
+CFG_TEE_COHERENT_SIZE ?= 0
 
 ifeq ($(CFG_ARM64_core),y)
 CFG_KERN_LINKER_FORMAT ?= elf64-littleaarch64

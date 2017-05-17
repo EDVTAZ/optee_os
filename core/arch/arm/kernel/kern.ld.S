@@ -53,9 +53,27 @@
 OUTPUT_FORMAT(CFG_KERN_LINKER_FORMAT)
 OUTPUT_ARCH(CFG_KERN_LINKER_ARCH)
 
+/* Several possible locations for the coherent memory */
+#define DECLARE_COHERENT_RAM_SECTION			\
+	. = CFG_TEE_COHERENT_START;			\
+	.coherent (NOLOAD) : {				\
+		ASSERT(!(. & (4096 - 1)),		\
+			"Coherent memory start is not aligned");\
+		__coherent_start = .;			\
+		KEEP(*(.coherent_ram));			\
+		. = ALIGN(4096);			\
+		__coherent_end = .;			\
+		ASSERT(CFG_TEE_COHERENT_SIZE >= (. - __coherent_start),	\
+			"Coherent memory is undersized"); \
+	}
+
 ENTRY(_start)
 SECTIONS
 {
+#if CFG_TEE_COHERENT_SIZE && (CFG_TEE_COHERENT_START <= CFG_TEE_LOAD_ADDR)
+	DECLARE_COHERENT_RAM_SECTION
+#endif
+
 	. = CFG_TEE_LOAD_ADDR;
 
 	/* text/read-only data */
@@ -347,6 +365,10 @@ SECTIONS
 #endif
 	. = CFG_TEE_RAM_START + CFG_TEE_RAM_VA_SIZE;
 	_end_of_ram = .;
+
+#if CFG_TEE_COHERENT_SIZE && (CFG_TEE_COHERENT_START > CFG_TEE_LOAD_ADDR)
+	DECLARE_COHERENT_RAM_SECTION
+#endif
 
 	/DISCARD/ : {
 		/* Strip unnecessary stuff */

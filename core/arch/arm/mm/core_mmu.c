@@ -96,6 +96,8 @@ register_sdp_mem(CFG_TEE_SDP_MEM_BASE, CFG_TEE_SDP_MEM_SIZE);
 register_phys_mem(MEM_AREA_TEE_RAM, CFG_TEE_RAM_START, CFG_TEE_RAM_PH_SIZE);
 register_phys_mem(MEM_AREA_TA_RAM, CFG_TA_RAM_START, CFG_TA_RAM_SIZE);
 register_phys_mem(MEM_AREA_NSEC_SHM, CFG_SHMEM_START, CFG_SHMEM_SIZE);
+register_phys_mem(MEM_AREA_TEE_COHERENT, CFG_TEE_COHERENT_START,
+					 CFG_TEE_COHERENT_SIZE);
 
 static bool _pbuf_intersects(struct memaccess_area *a, size_t alen,
 			     paddr_t pa, size_t size)
@@ -394,6 +396,7 @@ uint32_t core_mmu_type_to_attr(enum teecore_memtypes t)
 	case MEM_AREA_IO_NSEC:
 		return attr | noncache;
 	case MEM_AREA_IO_SEC:
+	case MEM_AREA_TEE_COHERENT:
 		return attr | TEE_MATTR_SECURE | noncache;
 	case MEM_AREA_RAM_NSEC:
 		return attr | cached;
@@ -413,7 +416,8 @@ static bool __maybe_unused map_is_tee_ram(const struct tee_mmap_region *mm)
 
 static bool map_is_flat_mapped(const struct tee_mmap_region *mm)
 {
-	return map_is_tee_ram(mm);
+	return map_is_tee_ram(mm) ||
+		(mm->type == MEM_AREA_TEE_COHERENT);
 }
 
 static bool __maybe_unused map_is_secure(const struct tee_mmap_region *mm)
