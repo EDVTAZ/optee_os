@@ -352,8 +352,16 @@
 #define CFG_TEE_RAM_VA_SIZE	(1024 * 1024)
 #endif
 
+/*
+ * Default locate coherent memory at start of secure RAM.
+ * Default locate load address right after coherent RAM.
+ */
+#ifndef CFG_TEE_COHERENT_START
+#define CFG_TEE_COHERENT_START	CFG_TEE_RAM_START
+#endif
 #ifndef CFG_TEE_LOAD_ADDR
-#define CFG_TEE_LOAD_ADDR	CFG_TEE_RAM_START
+#define CFG_TEE_LOAD_ADDR	(CFG_TEE_COHERENT_START + \
+					CFG_TEE_COHERENT_SIZE)
 #endif
 
 #define PL310_BASE		(CPU_IOMEM_BASE + 0x2000)
