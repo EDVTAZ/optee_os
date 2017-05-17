@@ -259,8 +259,16 @@
 
 #define CFG_TEE_RAM_VA_SIZE	(1024 * 1024)
 
+/*
+ * Default locate coherent memory at start of secure RAM.
+ * Default locate load address right after coherent RAM.
+ */
+#ifndef CFG_TEE_COHERENT_START
+#define CFG_TEE_COHERENT_START	CFG_TEE_RAM_START
+#endif
 #ifndef CFG_TEE_LOAD_ADDR
-#define CFG_TEE_LOAD_ADDR	CFG_TEE_RAM_START
+#define CFG_TEE_LOAD_ADDR	(CFG_TEE_COHERENT_START + \
+					CFG_TEE_COHERENT_SIZE)
 #endif
 
 #ifdef CFG_WITH_PAGER
