@@ -71,6 +71,7 @@ SECTIONS
 		ASSERT(!(. & (SMALL_PAGE_SIZE - 1)),
 			"Coherent memory start is not aligned");
 		__coherent_start = .;
+		KEEP(*(.plat_private_coherent_structure));
 		KEEP(*(.coherent_ram));
 		. = ALIGN(SMALL_PAGE_SIZE);
 		__coherent_end = .;

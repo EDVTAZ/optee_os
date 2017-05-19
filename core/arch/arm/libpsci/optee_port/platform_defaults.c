@@ -46,7 +46,7 @@ struct plat_coherent_data {
 };
 
 static struct plat_coherent_data plat_coherent_data
-	__section("plat_coherent_structure");
+	__section(".plat_private_coherent_structure");
 
 
 #ifdef PSCI_PLATFORM_SYSTEM_COUNT
