@@ -117,7 +117,7 @@ __weak int plat_validate_mpidr(u_register_t mpidr)
  * - primary boot core expects earlier boot stage loaded it.
  * - secondary boot cores get the value saved in RAM by primary core.
  */
-static uint32_t shared_cntfrq __coherent_ram;
+static uint32_t shared_cntfrq __coherent;
 
 __weak unsigned int plat_get_syscnt_freq2(void)
 {
