@@ -233,7 +233,7 @@ int psci_setup(const psci_lib_args_t *lib_args)
 	 */
 	psci_set_pwr_domains_to_run(PLAT_MAX_PWR_LVL);
 
-	plat_setup_psci_ops((uintptr_t)lib_args->mailbox_ep, &psci_plat_pm_ops);
+	plat_setup_psci_ops(lib_args->warmboot_ep, &psci_plat_pm_ops);
 	assert(psci_plat_pm_ops);
 
 	/*
