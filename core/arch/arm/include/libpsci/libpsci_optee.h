@@ -136,6 +136,10 @@ static inline void zeromem(void *addr, size_t size)
 	memset(addr, 0, size);
 }
 
+void flush_dcache_range(unsigned long int va, size_t len);
+void inv_dcache_range(unsigned long int va, size_t len);
+void flush_inner_cache(void);
+void flush_outer_cache(void);
 #endif /* __ASSEMBLY__ */
 
 #endif /* LIBPSCI_OPTEE_H */
