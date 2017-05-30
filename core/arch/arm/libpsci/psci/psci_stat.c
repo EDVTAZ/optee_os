@@ -31,6 +31,8 @@
 #include <assert.h>
 #include <libpsci/libpsci_optee.h>
 
+#if ENABLE_PSCI_STAT
+
 #include "psci_private.h"
 
 #ifndef PLAT_MAX_PWR_LVL_STATES
@@ -263,3 +265,4 @@ u_register_t psci_stat_count(u_register_t target_cpu,
 	else
 		return 0;
 }
+#endif /* ENABLE_PSCI_STAT */

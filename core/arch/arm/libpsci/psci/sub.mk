@@ -1,0 +1,9 @@
+subdirs-y += aarch32
+srcs-y += psci_common.c
+srcs-y += psci_main.c
+srcs-y += psci_off.c
+srcs-y += psci_on.c
+srcs-y += psci_setup.c
+srcs-y += psci_stat.c
+srcs-y += psci_suspend.c
+srcs-y += psci_system_off.c

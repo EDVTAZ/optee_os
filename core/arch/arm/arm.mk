@@ -56,6 +56,11 @@ ifneq ($(CFG_WITH_ARM_TRUSTED_FW),y)
 core-platform-subdirs += $(arch-dir)/sm
 endif
 
+ifeq ($(CFG_ATF_PSCI_ARM32),y)
+$(call force,CFG_PSCI_ARM32,y)
+core-platform-subdirs += $(arch-dir)/libpsci
+endif
+
 arm64-platform-cppflags += -DARM64=1 -D__LP64__=1
 arm32-platform-cppflags += -DARM32=1 -D__ILP32__=1
 
