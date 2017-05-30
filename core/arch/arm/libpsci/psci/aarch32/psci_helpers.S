@@ -52,7 +52,7 @@
  * attributes after the data cache is disabled.
  * -----------------------------------------------------------------------
  */
-func psci_do_pwrdown_cache_maintenance
+FUNC psci_do_pwrdown_cache_maintenance , :
 	push	{r4, lr}
 
 	/* ----------------------------------------------
@@ -74,7 +74,7 @@ func psci_do_pwrdown_cache_maintenance
 	mov	r0, r4
 	pop	{r4, lr}
 	b	prepare_cpu_pwr_dwn
-endfunc psci_do_pwrdown_cache_maintenance
+END_FUNC psci_do_pwrdown_cache_maintenance
 
 
 /* -----------------------------------------------------------------------
@@ -85,7 +85,7 @@ endfunc psci_do_pwrdown_cache_maintenance
  * on the data cache.
  * -----------------------------------------------------------------------
  */
-func psci_do_pwrup_cache_maintenance
+FUNC psci_do_pwrup_cache_maintenance , :
 	/* r12 is pushed to meet the 8 byte stack alignment requirement */
 	push	{r12, lr}
 
@@ -112,13 +112,13 @@ func psci_do_pwrup_cache_maintenance
 	 * Enable the data cache.
 	 * ---------------------------------------------
 	 */
-	ldcopr	r0, SCTLR
+	read_sctlr r0			@ ldcopr	r0, SCTLR
 	orr	r0, r0, #SCTLR_C_BIT
-	stcopr	r0, SCTLR
+	write_sctlr r0			@ stcopr	r0, SCTLR
 	isb
 
 	pop	{r12, pc}
-endfunc psci_do_pwrup_cache_maintenance
+END_FUNC psci_do_pwrup_cache_maintenance
 
 	/* ---------------------------------------------
 	 * void do_stack_maintenance(void)
@@ -127,14 +127,14 @@ endfunc psci_do_pwrup_cache_maintenance
 	 * remainder.
 	 * ---------------------------------------------
 	 */
-func do_stack_maintenance
+FUNC do_stack_maintenance , :
 	push	{r4, lr}
 	bl	plat_get_my_stack
 
 	/* Turn off the D-cache */
-	ldcopr	r1, SCTLR
+	read_sctlr r1			@ ldcopr	r1, SCTLR
 	bic	r1, #SCTLR_C_BIT
-	stcopr	r1, SCTLR
+	write_sctlr r1			@ stcopr	r1, SCTLR
 	isb
 
 	/* ---------------------------------------------
@@ -159,7 +159,7 @@ func do_stack_maintenance
 	bl	inv_dcache_range
 
 	pop	{r4, pc}
-endfunc do_stack_maintenance
+END_FUNC do_stack_maintenance
 
 /* -----------------------------------------------------------------------
  * This function is called to indicate to the power controller that it
@@ -167,8 +167,8 @@ endfunc do_stack_maintenance
  * be released from reset upon power up.
  * -----------------------------------------------------------------------
  */
-func psci_power_down_wfi
+FUNC psci_power_down_wfi , :
 	dsb	sy		// ensure write buffer empty
 	wfi
-	no_ret	plat_panic_handler
-endfunc psci_power_down_wfi
+	b	.		// panic !!!
+END_FUNC psci_power_down_wfi
