@@ -28,11 +28,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stddef.h>
-#include <arch_helpers.h>
 #include <assert.h>
-#include <debug.h>
-#include <platform.h>
+#include <libpsci/libpsci_optee.h>
+#include <stddef.h>
+
 #include "psci_private.h"
 
 void psci_system_off(void)

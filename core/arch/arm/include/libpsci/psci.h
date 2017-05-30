@@ -31,12 +31,8 @@
 #ifndef __PSCI_H__
 #define __PSCI_H__
 
-#include <bakery_lock.h>
-#include <bl_common.h>
-#include <platform_def.h>	/* for PLAT_NUM_PWR_DOMAINS */
-#if ENABLE_PLAT_COMPAT
-#include <psci_compat.h>
-#endif
+#include <libpsci/bakery_lock.h>
+#include <libpsci/libpsci_optee.h>
 
 /*******************************************************************************
  * Number of power domains whose state this PSCI implementation can track
@@ -189,7 +185,7 @@
 #ifndef __ASSEMBLY__
 
 #include <stdint.h>
-#include <types.h>
+#include <sys/types.h>
 
 /*
  * These are the states reported by the PSCI_AFFINITY_INFO API for the specified

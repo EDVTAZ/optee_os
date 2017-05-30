@@ -28,11 +28,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arch_helpers.h>
+#include <arm32.h>	/* replaces A-TF arch_helpers.h */
 #include <assert.h>
-#include <bakery_lock.h>
-#include <cpu_data.h>
-#include <platform.h>
+#include <libpsci/bakery_lock.h>
 #include <string.h>
 
 /*

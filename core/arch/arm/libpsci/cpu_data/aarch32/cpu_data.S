@@ -28,8 +28,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <asm_macros.S>
-#include <cpu_data.h>
+#include <asm.S>
+#include <libpsci/cpu_data.h>
+#include <libpsci/libpsci_optee.h>
 
 	.globl	_cpu_data
 	.globl	_cpu_data_by_index

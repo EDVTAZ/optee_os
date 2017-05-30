@@ -28,9 +28,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <asm_macros.S>
-#include <platform_def.h>
-#include <psci.h>
+#include <asm.S>
+#include <arm32_macros.S>
+#include <arm32.h>
+#include <libpsci/libpsci_optee.h>
+#include <libpsci/psci.h>
 
 	.globl	psci_do_pwrdown_cache_maintenance
 	.globl	psci_do_pwrup_cache_maintenance

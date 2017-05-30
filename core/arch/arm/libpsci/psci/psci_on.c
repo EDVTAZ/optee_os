@@ -28,14 +28,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arch.h>
-#include <arch_helpers.h>
 #include <assert.h>
-#include <bl_common.h>
-#include <debug.h>
-#include <context_mgmt.h>
-#include <platform.h>
+#include <libpsci/cpu_data.h>
+#include <libpsci/libpsci_optee.h>
 #include <stddef.h>
+
 #include "psci_private.h"
 
 /*******************************************************************************
