@@ -64,6 +64,21 @@ OUTPUT_ARCH(CFG_KERN_LINKER_ARCH)
 ENTRY(_start)
 SECTIONS
 {
+#ifdef CFG_TEE_COHERENT_START
+	/* Optional coherent memory */
+	. = CFG_TEE_COHERENT_START;
+	.coherent (NOLOAD) : {
+		ASSERT(!(. & (SMALL_PAGE_SIZE - 1)),
+			"Coherent memory start is not aligned");
+		__coherent_start = .;
+		KEEP(*(.coherent_ram));
+		. = ALIGN(SMALL_PAGE_SIZE);
+		__coherent_end = .;
+		ASSERT(CFG_TEE_COHERENT_SIZE >= (. - __coherent_start),
+			"Coherent memory is undersized");
+	}
+#endif
+
 	. = CFG_TEE_LOAD_ADDR;
 
 	__text_start = .;
@@ -410,6 +425,11 @@ SECTIONS
 	}
 
 }
+
+#ifndef CFG_CORE_RWDATA_NOEXEC
+PROVIDE(__vcore_rwx_start = __flatmap_unpg_rx_start);
+PROVIDE(__vcore_rwx_size = _end_of_ram - __flatmap_unpg_rx_start);
+#endif
 
 /* Unpaged read-only memories */
 PROVIDE(__vcore_unpg_rx_start = __flatmap_unpg_rx_start);
