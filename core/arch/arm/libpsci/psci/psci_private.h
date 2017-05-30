@@ -31,12 +31,9 @@
 #ifndef __PSCI_PRIVATE_H__
 #define __PSCI_PRIVATE_H__
 
-#include <arch.h>
-#include <bakery_lock.h>
-#include <bl_common.h>
-#include <cpu_data.h>
-#include <psci.h>
-#include <spinlock.h>
+#include <libpsci/bakery_lock.h>
+#include <libpsci/libpsci_optee.h>
+#include <libpsci/psci.h>
 
 #if HW_ASSISTED_COHERENCY
 

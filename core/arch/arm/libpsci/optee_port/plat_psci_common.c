@@ -28,11 +28,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arch.h>
-#include <assert.h>
-#include <platform.h>
-#include <pmf.h>
-#include <psci.h>
+#include <libpsci/libpsci_optee.h>
+#include <libpsci/psci.h>
 
 #if ENABLE_PSCI_STAT && ENABLE_PMF
 #pragma weak plat_psci_stat_accounting_start

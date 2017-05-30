@@ -29,17 +29,10 @@
  */
 
 #include <assert.h>
-#include <bl_common.h>
-#include <arch.h>
-#include <arch_helpers.h>
-#include <context.h>
-#include <context_mgmt.h>
-#include <cpu_data.h>
-#include <debug.h>
-#include <platform.h>
-#include <pmf.h>
-#include <runtime_instr.h>
+#include <libpsci/cpu_data.h>
+#include <libpsci/libpsci_optee.h>
 #include <stddef.h>
+
 #include "psci_private.h"
 
 /*******************************************************************************
