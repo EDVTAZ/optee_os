@@ -75,7 +75,7 @@ static void psci_suspend_to_standby_finisher(unsigned int cpu_idx,
  * operations.
  ******************************************************************************/
 static void psci_suspend_to_pwrdown_start(unsigned int end_pwrlvl,
-					  entry_point_info_t *ep,
+					  entry_point_info_t *ep __maybe_unused,
 					  psci_power_state_t *state_info)
 {
 	unsigned int max_off_lvl = psci_find_max_off_lvl(state_info);
@@ -276,7 +276,7 @@ exit:
  * are called by the common finisher routine in psci_common.c. The `state_info`
  * is the psci_power_state from which this CPU has woken up from.
  ******************************************************************************/
-void psci_cpu_suspend_finish(unsigned int cpu_idx,
+void psci_cpu_suspend_finish(unsigned int cpu_idx __maybe_unused,
 			     psci_power_state_t *state_info)
 {
 	unsigned int counter_freq;
