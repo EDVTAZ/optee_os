@@ -5,10 +5,26 @@
  * Author: etienne carriere <etienne.carriere@st.com> for STMicroelectronics.
  */
 
+#include <initcall.h>
+#include <kernel/generic_boot.h>
 #include <kernel/misc.h>
 #include <libpsci/libpsci_optee.h>
 #include <mm/core_mmu.h>
 #include <tee/cache.h>
+#include <tee_api_types.h>
+
+static TEE_Result libpsci_init(void)
+{
+	const psci_lib_args_t arg = {
+		.warmboot_ep = (paddr_t)warmboot_entrypoint,
+	};
+
+	if (psci_setup(&arg))
+		panic("libpsci init failure");
+
+	return TEE_SUCCESS;
+}
+service_init(libpsci_init);
 
 unsigned int plat_my_core_pos(void)
 {

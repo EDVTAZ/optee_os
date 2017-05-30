@@ -88,6 +88,9 @@
 typedef unsigned int u_register_t;
 typedef unsigned int spinlock_t;
 typedef paddr_t entry_point_info_t;
+typedef struct psci_lib_args {
+	paddr_t	warmboot_ep;
+} psci_lib_args_t;
 
 static inline paddr_t epinfo2ep(entry_point_info_t *ep)
 {

@@ -41,7 +41,7 @@
  */
 
 /* Platform initialisations for the libpsci */
-int plat_setup_psci_ops(uintptr_t sec_entrypoint,
+int plat_setup_psci_ops(paddr_t sec_entrypoint,
 			const struct plat_psci_ops **psci_ops);
 
 /* Get the power domain tree from the platform */
