@@ -55,6 +55,8 @@ extern const struct core_mmu_phys_mem __end_phys_mem_map_section;
 extern const struct core_mmu_phys_mem __start_phys_nsec_ddr_section;
 extern const struct core_mmu_phys_mem __end_phys_nsec_ddr_section;
 
+#define VCORE_RWX_PA		((paddr_t)__vcore_rwx_start)
+#define VCORE_RWX_SZ		((size_t)__vcore_rwx_size)
 #define VCORE_UNPG_RX_PA	((paddr_t)__vcore_unpg_rx_start)
 #define VCORE_UNPG_RX_SZ	((size_t)__vcore_unpg_rx_size)
 #define VCORE_UNPG_RO_PA	((paddr_t)__vcore_unpg_ro_start)
@@ -65,6 +67,8 @@ extern const struct core_mmu_phys_mem __end_phys_nsec_ddr_section;
 #define VCORE_INIT_RX_SZ	((size_t)__vcore_init_rx_size)
 #define VCORE_INIT_RO_PA	((paddr_t)__vcore_init_ro_start)
 #define VCORE_INIT_RO_SZ	((size_t)__vcore_init_ro_size)
+extern const uint8_t __vcore_rwx_start[];
+extern const uint8_t __vcore_rwx_size[];
 extern const uint8_t __vcore_unpg_rx_start[];
 extern const uint8_t __vcore_unpg_rx_size[];
 extern const uint8_t __vcore_unpg_ro_start[];

@@ -91,6 +91,11 @@ static struct memaccess_area nsec_shared[] = {
 register_sdp_mem(CFG_TEE_SDP_MEM_BASE, CFG_TEE_SDP_MEM_SIZE);
 #endif
 
+#ifdef CFG_TEE_COHERENT_START
+register_phys_mem(MEM_AREA_TEE_COHERENT, CFG_TEE_COHERENT_START,
+					 CFG_TEE_COHERENT_SIZE);
+#endif
+
 #ifdef CFG_CORE_RWDATA_NOEXEC
 register_phys_mem(MEM_AREA_TEE_RAM_RX, VCORE_UNPG_RX_PA, VCORE_UNPG_RX_SZ);
 register_phys_mem(MEM_AREA_TEE_RAM_RO, VCORE_UNPG_RO_PA, VCORE_UNPG_RO_SZ);
@@ -100,7 +105,7 @@ register_phys_mem(MEM_AREA_TEE_RAM_RX, VCORE_INIT_RX_PA, VCORE_INIT_RX_SZ);
 register_phys_mem(MEM_AREA_TEE_RAM_RO, VCORE_INIT_RO_PA, VCORE_INIT_RO_SZ);
 #endif
 #else
-register_phys_mem(MEM_AREA_TEE_RAM, CFG_TEE_RAM_START, CFG_TEE_RAM_PH_SIZE);
+register_phys_mem(MEM_AREA_TEE_RAM, VCORE_RWX_PA, VCORE_RWX_SZ);
 #endif
 
 register_phys_mem(MEM_AREA_TA_RAM, CFG_TA_RAM_START, CFG_TA_RAM_SIZE);
@@ -604,6 +609,7 @@ uint32_t core_mmu_type_to_attr(enum teecore_memtypes t)
 	case MEM_AREA_IO_NSEC:
 		return attr | TEE_MATTR_PRW | noncache;
 	case MEM_AREA_IO_SEC:
+	case MEM_AREA_TEE_COHERENT:
 		return attr | TEE_MATTR_SECURE | TEE_MATTR_PRW | noncache;
 	case MEM_AREA_RAM_NSEC:
 		return attr | TEE_MATTR_PRW | cached;
@@ -624,6 +630,7 @@ static bool __maybe_unused map_is_tee_ram(const struct tee_mmap_region *mm)
 	case MEM_AREA_TEE_RAM_RX:
 	case MEM_AREA_TEE_RAM_RO:
 	case MEM_AREA_TEE_RAM_RW:
+	case MEM_AREA_TEE_COHERENT:
 		return true;
 	default:
 		return false;
@@ -878,6 +885,7 @@ void core_init_mmu_map(void)
 		case MEM_AREA_TEE_RAM_RX:
 		case MEM_AREA_TEE_RAM_RO:
 		case MEM_AREA_TEE_RAM_RW:
+		case MEM_AREA_TEE_COHERENT:
 			if (!pbuf_is_inside(secure_only, map->pa, map->size))
 				panic("TEE_RAM can't fit in secure_only");
 			break;
@@ -1630,6 +1638,8 @@ static void *phys_to_virt_tee_ram(paddr_t pa)
 		mmap = find_map_by_type_and_pa(MEM_AREA_TEE_RAM_RO, pa);
 	if (!mmap)
 		mmap = find_map_by_type_and_pa(MEM_AREA_TEE_RAM_RX, pa);
+	if (!mmap)
+		mmap = find_map_by_type_and_pa(MEM_AREA_TEE_COHERENT, pa);
 
 	return map_pa2va(mmap, pa);
 }
@@ -1647,6 +1657,7 @@ void *phys_to_virt(paddr_t pa, enum teecore_memtypes m)
 	case MEM_AREA_TEE_RAM_RX:
 	case MEM_AREA_TEE_RAM_RO:
 	case MEM_AREA_TEE_RAM_RW:
+	case MEM_AREA_TEE_COHERENT:
 		va = phys_to_virt_tee_ram(pa);
 		break;
 	default:
