@@ -3,7 +3,6 @@ CFG_LTC_OPTEE_THREAD ?= y
 # Only applicable when paging is enabled.
 CFG_CORE_TZSRAM_EMUL_SIZE ?= 458752
 CFG_LPAE_ADDR_SPACE_SIZE ?= (1ull << 32)
-CFG_TEE_COHERENT_SIZE ?= 0
 
 ifeq ($(CFG_ARM64_core),y)
 CFG_KERN_LINKER_FORMAT ?= elf64-littleaarch64
@@ -57,10 +56,12 @@ core-platform-subdirs += $(arch-dir)/sm
 endif
 
 ifeq ($(CFG_ATF_PSCI_ARM32),y)
+CFG_TEE_COHERENT_SIZE ?= 4096
 $(call force,CFG_PSCI_ARM32,y)
 $(call force,CFG_BOOT_SECONDARY_REQUEST,y)
 core-platform-subdirs += $(arch-dir)/libpsci
 endif
+CFG_TEE_COHERENT_SIZE ?= 0
 
 arm64-platform-cppflags += -DARM64=1 -D__LP64__=1
 arm32-platform-cppflags += -DARM32=1 -D__ILP32__=1
