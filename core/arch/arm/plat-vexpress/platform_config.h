@@ -335,4 +335,25 @@
 #define CONSOLE_UART_CLK_IN_HZ	1
 #endif
 
+#ifdef CFG_ATF_PSCI_ARM32
+#define PSCI_PLATFORM_SYSTEM_COUNT		1
+#define PSCI_PLATFORM_CLUSTER_COUNT		1
+#define PSCI_PLATFORM_CLUSTER0_CORE_COUNT	CFG_TEE_CORE_NB_CORE
+
+#define PLAT_NUM_PWR_DOMAINS		(PSCI_PLATFORM_SYSTEM_COUNT + \
+						PSCI_PLATFORM_CLUSTER_COUNT + \
+						CFG_TEE_CORE_NB_CORE)
+
+/* 3 level power domain tree: 0=cpus clusters and cpus */
+#define PLAT_MAX_PWR_LVL			2
+
+/* Power state IDs: 0=on, 1=reteention, 2=off */
+#define PLAT_MAX_OFF_STATE			2
+#define PLAT_MAX_RET_STATE			1
+#define PLAT_LOCAL_STATE_RET			PLAT_MAX_RET_STATE
+
+/* No platform specific data needed to be stored during power cycles */
+#define PLAT_PCPU_DATA_SIZE			0
+#endif /* CFG_ATF_PSCI_ARM32 */
+
 #endif /*PLATFORM_CONFIG_H*/
