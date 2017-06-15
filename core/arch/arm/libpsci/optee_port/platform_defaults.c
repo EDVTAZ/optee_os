@@ -34,6 +34,21 @@
 #include <libpsci/libpsci_optee.h>
 #include <libpsci/psci.h>
 
+/*
+ * Define a platform specific structure at start of coherent RAM.
+ * This structure can be shared with the bootloader and hence must be located
+ * at a known physical address.
+ *
+ * @warmboot_ep		Physical entry point for warm boot of OP-TEE.
+ */
+struct plat_coherent_data {
+	paddr_t warmboot_ep;
+};
+
+static struct plat_coherent_data plat_coherent_data
+	__section("plat_coherent_structure");
+
+
 #ifdef PSCI_PLATFORM_SYSTEM_COUNT
 /* Generic current supports when PSCI_PLATFORM_SYSTEM_COUNT is defined */
 #if (PLAT_MAX_PWR_LVL != 2) || \
@@ -211,11 +226,14 @@ static const plat_psci_ops_t plat_def_psci_pm_ops = {
 	.validate_power_state = plat_def_validate_power_state,
 };
 
-__weak int plat_setup_psci_ops(uintptr_t sec_entrypoint __unused,
+__weak int plat_setup_psci_ops(paddr_t sec_entrypoint,
 				const plat_psci_ops_t **psci_ops)
 {
+	assert(&plat_coherent_data == (void *)CFG_TEE_COHERENT_START);
+
+	plat_coherent_data.warmboot_ep = (paddr_t)sec_entrypoint;
 	*psci_ops = &plat_def_psci_pm_ops;
 
-	return 0;
+	return PSCI_E_SUCCESS;
 }
 
