@@ -51,6 +51,9 @@ const unsigned char *plat_get_power_domain_tree_desc(void);
 unsigned int plat_my_core_pos(void);
 int plat_core_pos_by_mpidr(u_register_t mpidr);
 
+/* Validate an mpidr value based on power domain tree description */
+int plat_validate_mpidr(u_register_t mpidr);
+
 /*
  * Optional PSCI functions
  */
