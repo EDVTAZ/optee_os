@@ -538,6 +538,7 @@ UNWIND(	.fnend)
 END_FUNC reset_secondary
 
 #if defined(CFG_ATF_PSCI_ARM32)
+.section __unpaged_warmboot_entrypoint
 FUNC warmboot_entrypoint , :
 UNWIND(	.fnstart)
 UNWIND(	.cantunwind)
@@ -578,7 +579,6 @@ UNWIND(	.cantunwind)
 	b	.	/* SMC should not return */
 UNWIND(	.fnend)
 END_FUNC warmboot_entrypoint
-KEEP_PAGER warmboot_entrypoint
 
 #endif /* CFG_ATF_PSCI_ARM32 */
 

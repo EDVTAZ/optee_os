@@ -54,6 +54,10 @@ $(link-out-dir)/text_unpaged.ld.S: $(link-out-dir)/unpaged.o
 	@$(cmd-echo-silent) '  GEN     $@'
 	$(q)$(READELFcore) -S -W $< | \
 		./scripts/gen_ld_sects.py .text. > $@
+ifeq ($(CFG_ATF_PSCI_ARM32),y)
+	${q}printf " 	*(.text.unpaged_warmboot_entrypoint)" >> $@
+endif
+
 
 cleanfiles += $(link-out-dir)/rodata_unpaged.ld.S
 $(link-out-dir)/rodata_unpaged.ld.S: $(link-out-dir)/unpaged.o
