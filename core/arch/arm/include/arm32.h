@@ -704,10 +704,6 @@ static inline uint64_t read_pmu_ccnt(void)
 	return val;
 }
 
-static inline void wfi(void)
-{
-	asm volatile("wfi");
-}
 #endif /*ASM*/
 
 #endif /*ARM32_H*/
