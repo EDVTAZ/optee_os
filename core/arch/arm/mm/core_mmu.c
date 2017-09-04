@@ -51,7 +51,9 @@
 
 #include "core_mmu_private.h"
 
+#ifndef MAX_MMAP_REGIONS
 #define MAX_MMAP_REGIONS	13
+#endif
 #define RES_VASPACE_SIZE	(CORE_MMU_PGDIR_SIZE * 10)
 #define SHM_VASPACE_SIZE	(1024 * 1024 * 32)
 
