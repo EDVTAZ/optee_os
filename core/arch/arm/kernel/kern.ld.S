@@ -69,9 +69,29 @@
 OUTPUT_FORMAT(CFG_KERN_LINKER_FORMAT)
 OUTPUT_ARCH(CFG_KERN_LINKER_ARCH)
 
+#define  LINK_COHERENT_RAM \
+		. = CFG_TEE_COHERENT_START; \
+		.coherent (NOLOAD) : { \
+			ASSERT(!(. & (SMALL_PAGE_SIZE - 1)), \
+				"Coherent memory start is not aligned"); \
+			__coherent_start = .; \
+			KEEP(*(.coherent_ram)); \
+			. = ALIGN(SMALL_PAGE_SIZE); \
+			__coherent_end = .; \
+			ASSERT(CFG_TEE_COHERENT_SIZE >= \
+				(. - __coherent_start), \
+				"Coherent memory is undersized"); \
+		}
+
 ENTRY(_start)
 SECTIONS
 {
+#if defined(CFG_TEE_COHERENT_START) && \
+    (CFG_TEE_COHERENT_START < TEE_TEXT_VA_START)
+	LINK_COHERENT_RAM
+	ASSERT(. <= TEE_TEXT_VA_START, "Coherent memory is oversized")
+#endif
+
 	. = TEE_TEXT_VA_START;
 #ifdef ARM32
 	ASSERT(!(TEE_TEXT_VA_START & 31), "text start should align to 32bytes")
@@ -432,6 +452,12 @@ SECTIONS
 
 #ifndef CFG_WITH_PAGER
 	__flatmap_unpg_rw_size = _end_of_ram - __flatmap_unpg_rw_start;
+#endif
+
+#if defined(CFG_TEE_COHERENT_START) && \
+    (CFG_TEE_COHERENT_START > CFG_TEE_RAM_START)
+	ASSERT(. <= CFG_TEE_COHERENT_START, "Coherent memory does not fit")
+	LINK_COHERENT_RAM
 #endif
 
 	/DISCARD/ : {
