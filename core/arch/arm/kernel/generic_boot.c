@@ -274,13 +274,11 @@ static void init_runtime(unsigned long pageable_part)
 	tee_pager_init(mm);
 
 	/*
-	 * Claim virtual memory which isn't paged, note that there migth be
-	 * a gap between tee_mm_vcore.lo and TEE_RAM_START which is also
-	 * claimed to avoid later allocations to get that memory.
+	 * Claim virtual memory which isn't paged.
 	 * Linear memory (flat map core memory) ends there.
 	 */
-	mm = tee_mm_alloc2(&tee_mm_vcore, tee_mm_vcore.lo,
-			(vaddr_t)(__pageable_start - tee_mm_vcore.lo));
+	mm = tee_mm_alloc2(&tee_mm_vcore, VCORE_UNPG_RX_PA,
+			   (vaddr_t)(__pageable_start - VCORE_UNPG_RX_PA));
 	assert(mm);
 
 	/*
@@ -298,6 +296,10 @@ static void init_runtime(unsigned long pageable_part)
 	tee_pager_add_pages((vaddr_t)__pageable_start + init_size,
 			(pageable_size - init_size) / SMALL_PAGE_SIZE, true);
 
+	/* Pager can also use pages before unpaged memory if any */
+	tee_pager_add_pages(tee_mm_vcore.lo,
+			(VCORE_UNPG_RX_PA - tee_mm_vcore.lo) / SMALL_PAGE_SIZE,
+			true);
 }
 #else
 
