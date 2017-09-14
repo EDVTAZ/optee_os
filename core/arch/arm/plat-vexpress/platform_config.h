@@ -262,9 +262,7 @@
 
 #define CFG_TEE_RAM_VA_SIZE	(2 * 1024 * 1024)
 
-#ifndef CFG_TEE_LOAD_ADDR
-#define CFG_TEE_LOAD_ADDR	CFG_TEE_RAM_START
-#endif
+#define CFG_TEE_COHERENT_SIZE	4096
 
 #ifdef CFG_WITH_PAGER
 /*
@@ -279,10 +277,15 @@
  * |        | SDP RAM | (SDP test pool, optional)
  * +--------+---------+
  */
-#define CFG_TEE_RAM_PH_SIZE	TZSRAM_SIZE
-#define CFG_TEE_RAM_START	TZSRAM_BASE
+#if CFG_TEE_COHERENT_SIZE
+#define CFG_TEE_COHERENT_START	TZSRAM_BASE
+#endif
+
+#define CFG_TEE_RAM_PH_SIZE	(TZSRAM_SIZE - CFG_TEE_COHERENT_SIZE - 4096)
+#define CFG_TEE_RAM_START	(TZSRAM_BASE + CFG_TEE_COHERENT_SIZE)
 #define CFG_TA_RAM_START	ROUNDUP(TZDRAM_BASE, CORE_MMU_DEVICE_SIZE)
 
+#define CFG_TEE_LOAD_ADDR	(CFG_TEE_RAM_START + 4096 + 0x100)
 #else
 /*
  * Assumes that either TZSRAM isn't large enough or TZSRAM doesn't exist,
@@ -295,9 +298,16 @@
  * |        | SDP RAM | (test pool, optional)
  * +--------+---------+
  */
+#if CFG_TEE_COHERENT_SIZE
+#define CFG_TEE_COHERENT_START	TZDRAM_BASE
+#endif
+
 #define CFG_TEE_RAM_PH_SIZE	CFG_TEE_RAM_VA_SIZE
-#define CFG_TEE_RAM_START	TZDRAM_BASE
-#define CFG_TA_RAM_START	ROUNDUP(TZDRAM_BASE + CFG_TEE_RAM_VA_SIZE, \
+#define CFG_TEE_RAM_START	(TZDRAM_BASE + CFG_TEE_COHERENT_SIZE)
+#define CFG_TEE_LOAD_ADDR	(CFG_TEE_RAM_START + 4096 + 0x100)
+
+#define CFG_TA_RAM_START	ROUNDUP(CFG_TEE_RAM_START + \
+					CFG_TEE_RAM_VA_SIZE, \
 					CORE_MMU_DEVICE_SIZE)
 #endif
 
@@ -305,6 +315,10 @@
 					  (CFG_TA_RAM_START - TZDRAM_BASE) - \
 					  CFG_TEE_SDP_MEM_TEST_SIZE, \
 					  CORE_MMU_DEVICE_SIZE)
+
+#ifndef CFG_TEE_LOAD_ADDR
+#define CFG_TEE_LOAD_ADDR	CFG_TEE_RAM_START
+#endif
 
 /* Secure data path test memory pool: located at end of TA RAM */
 #if CFG_TEE_SDP_MEM_TEST_SIZE

@@ -76,6 +76,7 @@ OUTPUT_ARCH(CFG_KERN_LINKER_ARCH)
 				"Coherent memory start is not aligned"); \
 			__coherent_start = .; \
 			KEEP(*(.coherent_ram)); \
+			. += 8; \
 			. = ALIGN(SMALL_PAGE_SIZE); \
 			__coherent_end = .; \
 			ASSERT(CFG_TEE_COHERENT_SIZE >= \
