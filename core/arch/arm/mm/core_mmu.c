@@ -639,7 +639,12 @@ static bool __maybe_unused map_is_tee_ram(const struct tee_mmap_region *mm)
 
 static bool map_is_flat_mapped(const struct tee_mmap_region *mm)
 {
-	return map_is_tee_ram(mm);
+	switch (mm->type) {
+	case MEM_AREA_TEE_COHERENT:
+		return true;
+	default:
+		return map_is_tee_ram(mm);
+	}
 }
 
 static bool __maybe_unused map_is_secure(const struct tee_mmap_region *mm)
@@ -688,7 +693,7 @@ static void add_pager_vaspace(struct tee_mmap_region *mmap, size_t num_elems,
 	}
 
 	for (n = 0; !core_mmap_is_end_of_table(mmap + n); n++)
-		if (map_is_flat_mapped(mmap + n))
+		if (map_is_tee_ram(mmap + n))
 			pos = n + 1;
 
 	assert(pos <= *last);
@@ -740,6 +745,19 @@ static vaddr_t init_smallpage_map(struct tee_mmap_region *memory_map,
 
 }
 
+static bool vaspace_coherent_share_pgdir(vaddr_t vaspace, size_t sz_vaspace,
+					 vaddr_t coherent, size_t sz_coherent)
+{
+	vaddr_t va1 = ROUNDDOWN(vaspace, CORE_MMU_PGDIR_SIZE);
+	vaddr_t va2 = ROUNDDOWN(coherent, CORE_MMU_PGDIR_SIZE);
+	size_t sz1 = ROUNDUP(vaspace + sz_vaspace, CORE_MMU_PGDIR_SIZE) - va1;
+	size_t sz2 = ROUNDUP(coherent + sz_coherent, CORE_MMU_PGDIR_SIZE) - va2;
+
+	if (!sz_coherent)
+		return false;
+
+	return core_is_buffer_intersect(va1, sz1, va2, sz2);
+}
 
 static void init_mem_map(struct tee_mmap_region *memory_map, size_t num_elems)
 {
@@ -753,6 +771,9 @@ static void init_mem_map(struct tee_mmap_region *memory_map, size_t num_elems)
 	vaddr_t vaspace_start;
 	vaddr_t vaspace_size;
 	vaddr_t vstart;
+	vaddr_t __maybe_unused coherent_start = 0;
+	vaddr_t __maybe_unused coherent_size = 0;
+	bool pgdir_sharing;
 
 	for (mem = &__start_phys_mem_map_section;
 	     mem < &__end_phys_mem_map_section; mem++) {
@@ -816,8 +837,8 @@ static void init_mem_map(struct tee_mmap_region *memory_map, size_t num_elems)
 	/*
 	 * Map flat mapped addresses first.
 	 * 'va' (resp. 'end') will store the lower (reps. higher) address of
-	 * the flat-mapped areas to later setup the virtual mapping of the non
-	 * flat-mapped areas.
+	 * the tee_ram flat mapped areas to later setup the virtual mapping
+	 * of the non flat-mapped areas.
 	 */
 	va = (vaddr_t)~0UL;
 	end = 0;
@@ -827,8 +848,16 @@ static void init_mem_map(struct tee_mmap_region *memory_map, size_t num_elems)
 
 		map->attr = core_mmu_type_to_attr(map->type);
 		map->va = map->pa;
-		va = MIN(va, ROUNDDOWN(map->va, map->region_size));
-		end = MAX(end, ROUNDUP(map->va + map->size, map->region_size));
+
+		if (map->type == MEM_AREA_TEE_COHERENT) {
+			assert(!coherent_start);
+			coherent_start = map->va;
+			coherent_size = map->size;
+		} else {
+			va = MIN(va, ROUNDDOWN(map->va, map->region_size));
+			end = MAX(end, ROUNDUP(map->va + map->size,
+						map->region_size));
+		}
 	}
 	assert(va >= TEE_RAM_VA_START);
 	assert(end <= TEE_RAM_VA_START + CFG_TEE_RAM_VA_SIZE);
@@ -837,38 +866,65 @@ static void init_mem_map(struct tee_mmap_region *memory_map, size_t num_elems)
 
 	assert(!((va | end) & SMALL_PAGE_MASK));
 
-	/*
-	 * If memory is constrained, flat map and vaspace are small page
-	 * mapped. First use xlat entries from already allocated page
-	 * table for other small-page mapped areas before allocating
-	 * other page tables.
-	 *
-	 * Note that non-LPAE cannot reuse secure xlat table for non secure
-	 * mapping entries. The non-LPAE will assign non secure entries with
-	 * small page region size after the vaspace.
-	 */
-
 	/* Flat map and vaspace have defined a reserved virtual range */
 	vaspace_start = va;
 	vaspace_size = end - va;
 
-	/* Resuse xlat entries before vaspace */
-	vstart = ROUNDDOWN(vaspace_start, CORE_MMU_PGDIR_SIZE);
-	init_smallpage_map(memory_map, vstart, vaspace_start, false);
+	/*
+	 * If memory is constrained, flat map and vaspace are small page
+	 * mapped. The sequence below tries to use the page map entries from
+	 * the tables used to map the flat map/vaspace before spreading over
+	 * other to-be-allocated tables.
+	 *
+	 * Note that non-LPAE cannot reuse secure xlat tables for non secure
+	 * mapping entries. The non-LPAE will assign small page mapped
+	 * non-secure entries after the vaspace.
+	 *
+	 * If coherent and vaspace use the same pgdir entry/ies, optimize
+	 * xlat reuse around coherent and vaspace.
+	 *
+	 * If coherent and vaspace do not use the same pgdir entry/ies, the
+	 * sequence below will not try to reuse page map entries around
+	 * coherent memory, only around vaspace.
+	 */
+	pgdir_sharing =
+		vaspace_coherent_share_pgdir(vaspace_start, vaspace_size,
+					     coherent_start, coherent_size);
 
-	/* Resuse xlat entries after vaspace */
+	if (pgdir_sharing && coherent_start < vaspace_start) {
+		/* Resuse xlat entries before coherent */
+		vstart = ROUNDDOWN(coherent_start, CORE_MMU_PGDIR_SIZE);
+		init_smallpage_map(memory_map, vstart, coherent_start, false);
+
+		vstart = coherent_start + coherent_size;
+	} else
+		vstart = ROUNDDOWN(vaspace_start, CORE_MMU_PGDIR_SIZE);
+
+	/* Resuse xlat entries before vaspace */
+	init_smallpage_map(memory_map, vstart, vaspace_start, false);
 	vstart = vaspace_start + vaspace_size;
-	assert(!(vstart & SMALL_PAGE_MASK));
+
+	if (coherent_start > vaspace_start) {
+		/* Resuse xlat entries above vaspace up to coherent */
+		init_smallpage_map(memory_map, vstart, coherent_start, false);
+		vstart = coherent_start + coherent_size;
+	}
+
+	/* Assign remaining entries from where we are */
 	vstart = init_smallpage_map(memory_map, vstart, ~0, false);
 
 #if !defined(CFG_WITH_LPAE)
-	/* 2nd level xlat for non-secure small page mapping */
+	/* Specific 2nd level xlat for non-secure small page mapping */
 	vstart = ROUNDUP(vstart, CORE_MMU_PGDIR_SIZE);
 	vstart = init_smallpage_map(memory_map, vstart, ~0, true);
 #endif
 
-	/* Vaspace now covers the whole range of assigned virtual ranges */
-	vaspace_start = ROUNDDOWN(vaspace_start, CORE_MMU_PGDIR_SIZE);
+	/* Vaspace now covers the already assigned virtual address ranges */
+	if (!pgdir_sharing)
+		vaspace_start = ROUNDDOWN(vaspace_start, CORE_MMU_PGDIR_SIZE);
+	else
+		vaspace_start = ROUNDDOWN(MIN(vaspace_start, coherent_start),
+					  CORE_MMU_PGDIR_SIZE);
 	vaspace_size = ROUNDUP(vstart, CORE_MMU_PGDIR_SIZE) - vaspace_start;
 
 	/* All small page map area shall be assigned a location */
@@ -876,13 +932,14 @@ static void init_mem_map(struct tee_mmap_region *memory_map, size_t num_elems)
 		assert(map->va || map->region_size != SMALL_PAGE_SIZE);
 
 #ifdef CFG_WITH_LPAE
-	/* LPAE: use the 1GB around flat map. 1 pgdir protection if 1st GB */
+	/* LPAE: use the 1GB around flat map. */
 	va = ROUNDDOWN(vaspace_start, BIT64(30));
 #else
 	/* Non LPAE: must locate user memory below the core mapping (TTBR0) */
 	core_mmu_get_user_va_range(&va, &max_size);
 	va += max_size;
 #endif
+	/* If starting from NULL, keep a pgdir for protection */
 	if (!va)
 		va = CORE_MMU_PGDIR_SIZE;
 
@@ -903,6 +960,11 @@ static void init_mem_map(struct tee_mmap_region *memory_map, size_t num_elems)
 		if (core_is_buffer_intersect(va, map->size,
 					     vaspace_start, vaspace_size)) {
 			va = vaspace_start + vaspace_size;
+			continue;
+		}
+		if (core_is_buffer_intersect(va, map->size,
+					     coherent_start, coherent_size)) {
+			va = coherent_start + coherent_size;
 			continue;
 		}
 
