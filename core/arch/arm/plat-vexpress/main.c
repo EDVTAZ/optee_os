@@ -194,6 +194,18 @@ service_init(init_tzc400);
 #endif /*CFG_TZC400*/
 
 #if defined(PLATFORM_FLAVOR_qemu_virt)
+#ifdef CFG_WITH_PAGER
+void plat_reuse_earlyboot_ram(void)
+{
+
+	tee_pager_add_phys_mem(0x0e000000 + 4096, 0x00100000 - 4096); // not the mapped mailbox
+}
+size_t plat_reuse_earlyboot_ram_size(void)
+{
+	return 0x00100000 - 4096; // not the mapped mailbox
+}
+#endif
+
 static void release_secondary_early_hpen(size_t pos)
 {
 	struct mailbox {

@@ -188,6 +188,7 @@ static inline void tee_pager_assign_uta_tables(struct user_ta_ctx *utc __unused)
  * npages is the number of pages to add
  */
 void tee_pager_add_pages(vaddr_t vaddr, size_t npages, bool unmap);
+void tee_pager_add_phys_mem(paddr_t paddr, size_t size);
 
 /*
  * tee_pager_alloc() - Allocate read-write virtual memory from pager.

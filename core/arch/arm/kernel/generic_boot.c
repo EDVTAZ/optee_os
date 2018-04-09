@@ -78,6 +78,19 @@ static void *dt_blob_addr;
 #endif
 
 /* May be overridden in plat-$(PLATFORM)/main.c */
+__weak void plat_reuse_earlyboot_ram(void)
+{
+}
+KEEP_INIT(plat_reuse_earlyboot_ram);
+
+/* May be overridden in plat-$(PLATFORM)/main.c */
+__weak size_t plat_reuse_earlyboot_ram_size(void)
+{
+	return 0;
+}
+KEEP_INIT(plat_reuse_earlyboot_ram_size);
+
+/* May be overridden in plat-$(PLATFORM)/main.c */
 __weak void plat_cpu_reset_late(void)
 {
 }
@@ -371,10 +384,20 @@ static void init_runtime(unsigned long pageable_part)
 	 * Assign alias area for pager end of the small page block the rest
 	 * of the binary is loaded into. We're taking more than needed, but
 	 * we're guaranteed to not need more than the physical amount of
-	 * TZSRAM.
+	 * TZSRAM and later extra physical RAM.
 	 */
-	mm = tee_mm_alloc2(&tee_mm_vcore,
-		(vaddr_t)tee_mm_vcore.hi - TZSRAM_SIZE, TZSRAM_SIZE);
+	{
+		vaddr_t start = (vaddr_t)tee_mm_vcore.hi;
+		size_t size = TZSRAM_SIZE;
+
+		size += plat_reuse_earlyboot_ram_size();
+		size = MIN(size, (vaddr_t)tee_mm_vcore.hi -
+				 ((vaddr_t)__pageable_start +pageable_size));
+
+		start -= size;
+
+		mm = tee_mm_alloc2(&tee_mm_vcore, start, size);
+	}
 	assert(mm);
 	tee_pager_init(mm);
 

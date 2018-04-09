@@ -128,6 +128,9 @@ END_FUNC reset_vect_table
 	bne	2b
 	b	1b
 3:
+#ifdef CFG_WITH_PAGER
+	bl	plat_reuse_earlyboot_ram
+#endif
 #endif
 	.endm
 

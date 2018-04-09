@@ -1516,6 +1516,32 @@ out:
 	return ret;
 }
 
+void tee_pager_add_phys_mem(paddr_t paddr, size_t size)
+{
+	struct tee_pager_pmem *pmem;
+	size_t npages = size >> SMALL_PAGE_SHIFT;
+	size_t n;
+
+	assert(!((paddr | size) & SMALL_PAGE_MASK));
+
+	pmem = calloc(npages, sizeof(struct tee_pager_pmem));
+	if (!pmem)
+		panic("out of mem");
+
+	for (n = 0; n < npages; n++) {
+		pmem[n].va_alias = pager_add_alias_page(paddr +
+							n * SMALL_PAGE_SIZE);
+		assert(pmem[n].va_alias);
+		pmem[n].area = NULL;
+		pmem[n].pgidx = INVALID_PGIDX;
+
+		tee_pager_npages++;
+		incr_npages_all();
+		set_npages();
+		TAILQ_INSERT_TAIL(&tee_pager_pmem_head, pmem + n, link);
+	}
+}
+
 void tee_pager_add_pages(vaddr_t vaddr, size_t npages, bool unmap)
 {
 	size_t n;
