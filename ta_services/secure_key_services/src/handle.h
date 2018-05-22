@@ -1,16 +1,15 @@
+/* SPDX-License-Identifier: BSD-2-Clause */
 /*
  * Copyright (c) 2014-2018, Linaro Limited
- *
- * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#ifndef __HANDLE_H
-#define __HANDLE_H
+#ifndef __HANDLE_H__
+#define __HANDLE_H__
 
 #include <stddef.h>
 
 struct handle_db {
-	void **ptrs;
+	uint32_t *ptrs;
 	uint32_t max_ptrs;
 };
 
@@ -27,8 +26,7 @@ void handle_db_destroy(struct handle_db *db);
  * Allocates a new handle and assigns the supplied pointer to it,
  * ptr must not be NULL.
  * The function returns
- * >= 0 on success and
- * -1 on failure
+ * ~0 on failure, and a valid handle on success
  */
 uint32_t handle_get(struct handle_db *db, void *ptr);
 
@@ -45,5 +43,5 @@ void *handle_put(struct handle_db *db, uint32_t handle);
  */
 void *handle_lookup(struct handle_db *db, uint32_t handle);
 
-#endif /*__HANDLE_H*/
+#endif /*__HANDLE_H__*/
 
