@@ -587,4 +587,79 @@ struct sks_attr_head {
 #define SKS_FALSE				0
 #define SKS_TRUE				1
 
+/*
+ * Attribute identificators
+ * Valid values for struct sks_reference::id
+ *
+ * SKS_ATTR_<x> corresponds to cryptoki CKA_<x>.
+ * Value range [0 63] is reserved to boolean value attributes.
+ */
+#define SKS_BOOLPROPS_BASE			0x00000000
+#define SKS_CKA_TOKEN				0x00000000
+#define SKS_CKA_PRIVATE				0x00000001
+#define SKS_CKA_TRUSTED				0x00000002
+#define SKS_CKA_SENSITIVE			0x00000003
+#define SKS_CKA_ENCRYPT				0x00000004
+#define SKS_CKA_DECRYPT				0x00000005
+#define SKS_CKA_WRAP				0x00000006
+#define SKS_CKA_UNWRAP				0x00000007
+#define SKS_CKA_SIGN				0x00000008
+#define SKS_CKA_SIGN_RECOVER			0x00000009
+#define SKS_CKA_VERIFY				0x0000000a
+#define SKS_CKA_VERIFY_RECOVER			0x0000000b
+#define SKS_CKA_DERIVE				0x0000000c
+#define SKS_CKA_EXTRACTABLE			0x0000000d
+#define SKS_CKA_LOCAL				0x0000000e
+#define SKS_CKA_NEVER_EXTRACTABLE		0x0000000f
+#define SKS_CKA_ALWAYS_SENSITIVE		0x00000010
+#define SKS_CKA_MODIFIABLE			0x00000011
+#define SKS_CKA_COPYABLE			0x00000012
+#define SKS_CKA_DESTROYABLE			0x00000013
+#define SKS_CKA_ALWAYS_AUTHENTICATE		0x00000014
+#define SKS_CKA_WRAP_WITH_TRUSTED		0x00000015
+#define SKS_BOOLPROPS_LAST			0x0000003F
+
+#define SKS_CKA_LABEL				0x00000040
+#define SKS_CKA_VALUE				0x00000041
+#define SKS_CKA_VALUE_LEN			0x00000042
+#define SKS_CKA_WRAP_TEMPLATE			0x00000043
+#define SKS_CKA_UNWRAP_TEMPLATE			0x00000044
+#define SKS_CKA_DERIVE_TEMPLATE			0x00000045
+#define SKS_CKA_START_DATE			0x00000046
+#define SKS_CKA_END_DATE			0x00000047
+#define SKS_CKA_OBJECT_ID			0x00000048
+#define SKS_CKA_APPLICATION			0x00000049
+#define SKS_CKA_MECHANISM_TYPE			0x0000004a
+#define SKS_CKA_ID				0x0000004b
+#define SKS_CKA_ALLOWED_MECHANISMS		0x0000004c
+#define SKS_CKA_CLASS				0x0000004d
+#define SKS_CKA_KEY_TYPE			0x0000004e
+
+/*
+ * Valid values for attribute SKS_CKA_CLASS
+ * SKS_CKO_<x> corresponds to cryptoki CKO_<x>.
+ */
+#define SKS_CKO_SECRET_KEY			0x000
+#define SKS_CKO_PUBLIC_KEY			0x001
+#define SKS_CKO_PRIVATE_KEY			0x002
+#define SKS_CKO_OTP_KEY				0x003
+#define SKS_CKO_CERTIFICATE			0x004
+#define SKS_CKO_DATA				0x005
+#define SKS_CKO_DOMAIN_PARAMETERS		0x006
+#define SKS_CKO_HW_FEATURE			0x007
+#define SKS_CKO_MECHANISM			0x008
+
+/*
+ * Valid values for attribute SKS_CKA_KEY_TYPE
+ * SKS_CKK_<x> corresponds to cryptoki CKK_<x> related to symmetric keys
+ */
+#define SKS_CKK_AES				0x000
+#define SKS_CKK_GENERIC_SECRET			0x001
+#define SKS_CKK_MD5_HMAC			0x002
+#define SKS_CKK_SHA_1_HMAC			0x003
+#define SKS_CKK_SHA224_HMAC			0x004
+#define SKS_CKK_SHA256_HMAC			0x005
+#define SKS_CKK_SHA384_HMAC			0x006
+#define SKS_CKK_SHA512_HMAC			0x007
+
 #endif /*__SKS_TA_H__*/
