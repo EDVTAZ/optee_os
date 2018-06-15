@@ -9,7 +9,9 @@
 #include <tee_internal_api_extensions.h>
 
 #include "handle.h"
+#include "object.h"
 #include "pkcs11_token.h"
+#include "processing.h"
 #include "sks_helpers.h"
 
 /* Client session context: currently only use the alloced address */
@@ -91,6 +93,7 @@ TEE_Result TA_InvokeCommandEntryPoint(void *tee_session __unused, uint32_t cmd,
 	TEE_Param *ctrl = NULL;
 	TEE_Param *in = NULL;
 	TEE_Param *out = NULL;
+	uintptr_t teesess = (uintptr_t)tee_session;
 	TEE_Result res;
 	uint32_t rc;
 
@@ -155,6 +158,65 @@ TEE_Result TA_InvokeCommandEntryPoint(void *tee_session __unused, uint32_t cmd,
 		break;
 	case SKS_CMD_CK_CLOSE_ALL_SESSIONS:
 		rc = entry_ck_token_close_all(teesess, ctrl, in, out);
+		break;
+
+	case SKS_CMD_IMPORT_OBJECT:
+		rc = entry_import_object(teesess, ctrl, in, out);
+		break;
+	case SKS_CMD_DESTROY_OBJECT:
+		rc = entry_destroy_object(teesess, ctrl, in, out);
+		break;
+
+	case SKS_CMD_ENCRYPT_INIT:
+	case SKS_CMD_DECRYPT_INIT:
+		rc = entry_cipher_init(teesess, ctrl, in, out,
+					cmd == SKS_CMD_DECRYPT_INIT);
+		break;
+	case SKS_CMD_ENCRYPT_UPDATE:
+	case SKS_CMD_DECRYPT_UPDATE:
+		rc = entry_cipher_update(teesess, ctrl, in, out,
+					 cmd == SKS_CMD_DECRYPT_UPDATE);
+		break;
+	case SKS_CMD_ENCRYPT_FINAL:
+	case SKS_CMD_DECRYPT_FINAL:
+		rc = entry_cipher_final(teesess, ctrl, in, out,
+					cmd == SKS_CMD_DECRYPT_FINAL);
+		break;
+
+	case SKS_CMD_GENERATE_SYMM_KEY:
+		rc = entry_generate_object(teesess, ctrl, in, out);
+		break;
+
+	case SKS_CMD_SIGN_INIT:
+	case SKS_CMD_VERIFY_INIT:
+		rc = entry_signverify_init(teesess, ctrl, in, out,
+						cmd == SKS_CMD_SIGN_INIT);
+		break;
+	case SKS_CMD_SIGN_UPDATE:
+	case SKS_CMD_VERIFY_UPDATE:
+		rc = entry_signverify_update(teesess, ctrl, in, out,
+						cmd == SKS_CMD_SIGN_UPDATE);
+		break;
+	case SKS_CMD_SIGN_FINAL:
+	case SKS_CMD_VERIFY_FINAL:
+		rc = entry_signverify_final(teesess, ctrl, in, out,
+						cmd == SKS_CMD_SIGN_FINAL);
+		break;
+
+	case SKS_CMD_FIND_OBJECTS_INIT:
+		rc = entry_find_objects_init(teesess, ctrl, in, out);
+		break;
+
+	case SKS_CMD_FIND_OBJECTS:
+		rc = entry_find_objects(teesess, ctrl, in, out);
+		break;
+
+	case SKS_CMD_FIND_OBJECTS_FINAL:
+		rc = entry_find_objects_final(teesess, ctrl, in, out);
+		break;
+
+	case SKS_CMD_DERIVE_KEY:
+		rc = entry_derive(teesess, ctrl, in, out);
 		break;
 
 	default:
