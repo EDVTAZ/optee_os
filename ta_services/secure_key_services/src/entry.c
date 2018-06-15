@@ -144,6 +144,19 @@ TEE_Result TA_InvokeCommandEntryPoint(void *tee_session __unused, uint32_t cmd,
 		rc = entry_ck_token_mecha_info(ctrl, in, out);
 		break;
 
+	case SKS_CMD_CK_OPEN_RO_SESSION:
+		rc = entry_ck_token_ro_session(teesess, ctrl, in, out);
+		break;
+	case SKS_CMD_CK_OPEN_RW_SESSION:
+		rc = entry_ck_token_rw_session(teesess, ctrl, in, out);
+		break;
+	case SKS_CMD_CK_CLOSE_SESSION:
+		rc = entry_ck_token_close_session(teesess, ctrl, in, out);
+		break;
+	case SKS_CMD_CK_CLOSE_ALL_SESSIONS:
+		rc = entry_ck_token_close_all(teesess, ctrl, in, out);
+		break;
+
 	default:
 		EMSG("Command ID 0x%x is not supported", cmd);
 		return TEE_ERROR_NOT_SUPPORTED;

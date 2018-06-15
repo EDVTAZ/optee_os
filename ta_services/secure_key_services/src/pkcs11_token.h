@@ -18,4 +18,13 @@ uint32_t entry_ck_token_mecha_ids(TEE_Param *ctrl,
 uint32_t entry_ck_token_mecha_info(TEE_Param *ctrl,
 				   TEE_Param *in, TEE_Param *out);
 
+uint32_t entry_ck_token_ro_session(uintptr_t teesess, TEE_Param *ctrl,
+				   TEE_Param *in, TEE_Param *out);
+uint32_t entry_ck_token_rw_session(uintptr_t teesess, TEE_Param *ctrl,
+				   TEE_Param *in, TEE_Param *out);
+uint32_t entry_ck_token_close_session(uintptr_t teesess, TEE_Param *ctrl,
+				      TEE_Param *in, TEE_Param *out);
+uint32_t entry_ck_token_close_all(uintptr_t teesess, TEE_Param *ctrl,
+				  TEE_Param *in, TEE_Param *out);
+
 #endif /*__SKS_PKCS11_TOKEN_H__*/

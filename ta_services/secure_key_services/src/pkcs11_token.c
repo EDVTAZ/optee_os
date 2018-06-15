@@ -134,3 +134,83 @@ uint32_t entry_ck_token_mecha_info(TEE_Param *ctrl,
 
 	return SKS_NOT_IMPLEMENTED;
 }
+
+/* ctrl=[slot-id], in=unused, out=[session-handle] */
+uint32_t entry_ck_token_ro_session(uintptr_t __unused teesess, TEE_Param *ctrl,
+				   TEE_Param *in, TEE_Param *out)
+{
+	uint32_t rv;
+	struct serialargs ctrlargs;
+	uint32_t token_id;
+
+	if (!ctrl || in || !out)
+		return SKS_BAD_PARAM;
+
+	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
+
+	rv = serialargs_get(&ctrlargs, &token_id, sizeof(uint32_t));
+	if (rv)
+		return rv;
+
+	return SKS_NOT_IMPLEMENTED;
+}
+
+/* ctrl=[slot-id], in=unused, out=[session-handle] */
+uint32_t entry_ck_token_rw_session(uintptr_t __unused teesess, TEE_Param *ctrl,
+				   TEE_Param *in, TEE_Param *out)
+{
+	uint32_t rv;
+	struct serialargs ctrlargs;
+	uint32_t token_id;
+
+	if (!ctrl || in || !out)
+		return SKS_BAD_PARAM;
+
+	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
+
+	rv = serialargs_get(&ctrlargs, &token_id, sizeof(uint32_t));
+	if (rv)
+		return rv;
+
+	return SKS_NOT_IMPLEMENTED;
+}
+
+/* ctrl=[session-handle], in=unused, out=unused */
+uint32_t entry_ck_token_close_session(uintptr_t __unused teesess,
+				      TEE_Param *ctrl, TEE_Param *in,
+				      TEE_Param *out)
+{
+	uint32_t rv;
+	struct serialargs ctrlargs;
+	uint32_t handle;
+
+	if (!ctrl || in || out || ctrl->memref.size < sizeof(uint32_t))
+		return SKS_BAD_PARAM;
+
+	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
+
+	rv = serialargs_get(&ctrlargs, &handle, sizeof(uint32_t));
+	if (rv)
+		return rv;
+
+	return SKS_NOT_IMPLEMENTED;
+}
+
+uint32_t entry_ck_token_close_all(uintptr_t __unused teesess, TEE_Param *ctrl,
+				  TEE_Param *in, TEE_Param *out)
+{
+	uint32_t rv;
+	struct serialargs ctrlargs;
+	uint32_t token_id;
+
+	if (!ctrl || in || out)
+		return SKS_BAD_PARAM;
+
+	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
+
+	rv = serialargs_get(&ctrlargs, &token_id, sizeof(uint32_t));
+	if (rv)
+		return rv;
+
+	return SKS_NOT_IMPLEMENTED;
+}
