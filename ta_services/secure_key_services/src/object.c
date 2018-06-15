@@ -14,6 +14,20 @@
 #include "serializer.h"
 #include "sks_helpers.h"
 
+/*
+ * Destroy an object
+ *
+ * @session - session requesting object destruction
+ * @obj - object to destroy
+ * @session_only - Destroy only the session resources
+ */
+uint32_t destroy_object(struct pkcs11_session *session __unused,
+			  struct sks_object *obj __unused,
+			  bool session_only __unused)
+{
+	return SKS_NOT_IMPLEMENTED;
+}
+
 uint32_t entry_destroy_object(uintptr_t __unused teesess, TEE_Param *ctrl,
 				TEE_Param *in, TEE_Param *out)
 {
@@ -41,7 +55,7 @@ uint32_t entry_destroy_object(uintptr_t __unused teesess, TEE_Param *ctrl,
 /*
  * Entry for command SKS_CMD_FIND_OBJECTS_INIT
  */
-uint32_t entry_find_objects_init(uintptr_t __unused teesess, TEE_Param *ctrl,
+uint32_t entry_find_objects_init(uintptr_t teesess __unused, TEE_Param *ctrl,
 				 TEE_Param *in, TEE_Param *out)
 {
 	uint32_t rv;
@@ -68,7 +82,7 @@ uint32_t entry_find_objects_init(uintptr_t __unused teesess, TEE_Param *ctrl,
 /*
  * Entry for command SKS_CMD_FIND_OBJECTS
  */
-uint32_t entry_find_objects(uintptr_t __unused teesess, TEE_Param *ctrl,
+uint32_t entry_find_objects(uintptr_t teesess __unused, TEE_Param *ctrl,
 			    TEE_Param *in, TEE_Param *out)
 {
 	uint32_t rv;
@@ -90,7 +104,7 @@ uint32_t entry_find_objects(uintptr_t __unused teesess, TEE_Param *ctrl,
 /*
  * Entry for command SKS_CMD_FIND_OBJECTS_FINAL
  */
-uint32_t entry_find_objects_final(uintptr_t __unused teesess, TEE_Param *ctrl,
+uint32_t entry_find_objects_final(uintptr_t teesess __unused, TEE_Param *ctrl,
 				  TEE_Param *in, TEE_Param *out)
 {
 	uint32_t rv;

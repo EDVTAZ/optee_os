@@ -45,8 +45,7 @@ enum pkcs11_token_session_state {
 	PKCS11_TOKEN_STATE_SESSION_READ_ONLY,
 };
 
-/* List of toen sessions */
-LIST_HEAD(session_list, pkcs11_session);
+TAILQ_HEAD(session_list, pkcs11_session);
 
 #define SKS_MAX_USERS			2
 #define SKS_TOKEN_PIN_SIZE		128
@@ -86,12 +85,71 @@ struct token_persistent_main {
  * @db_hld - TEE handle on the persistent database object or TEE_HANDLE_NULL
  * @pin_hld - TEE handles on PIN ciphering keys
  * @db_main - Volatile copy of the persistent main database
+ * @session_count - Counter for opened Pkcs11 sessions
+ * @rw_session_count - Count for opened Pkcs11 read/write sessions
+ * @session_state - Login state of the token
+ * @session_list - Head of the list of the sessions owned by the token
  */
 struct ck_token {
 	enum pkcs11_token_login_state login_state;
 	TEE_ObjectHandle db_hdl;
 	TEE_ObjectHandle pin_hdl[SKS_MAX_USERS];
 	struct token_persistent_main *db_main;
+	uint32_t session_counter;
+	uint32_t rw_session_counter;
+	enum pkcs11_token_session_state	session_state;
+	struct session_list session_list;
+	struct handle_db session_handle_db;
+};
+
+/*
+ * A session can enter a processing state (encrypt, decrypt, disgest, ...
+ * only from the inited state. A sesion must return the the inited
+ * state (from a processing finalization request) before entering another
+ * processing state.
+ */
+enum pkcs11_session_processing {
+	PKCS11_SESSION_READY = 0,		/* session default state */
+	PKCS11_SESSION_ENCRYPTING,
+	PKCS11_SESSION_DECRYPTING,
+	PKCS11_SESSION_DIGESTING,
+	PKCS11_SESSION_DIGESTING_ENCRYPTING,	/* case C_DigestEncryptUpdate */
+	PKCS11_SESSION_DECRYPTING_DIGESTING,	/* case C_DecryptDigestUpdate */
+	PKCS11_SESSION_SIGNING,
+	PKCS11_SESSION_SIGNING_ENCRYPTING,	/* case C_SignEncryptUpdate */
+	PKCS11_SESSION_VERIFYING,
+	PKCS11_SESSION_DECRYPTING_VERIFYING,	/* case C_DecryptVerifyUpdate */
+	PKCS11_SESSION_SIGNING_RECOVER,
+	PKCS11_SESSION_VERIFYING_RECOVER,
+};
+
+/*
+ * Structure tracking the PKCS#11 sessions
+ *
+ * @link - session litsing
+ * @token - token/slot this session belongs to
+ * @tee_session - TEE session use to create the PLCS session
+ * @handle - identifier of the session
+ * @readwrite - true if the session is read/write, false if read-only
+ * @state - R/W SO, R/W user, RO user, R/W public, RO public. See PKCS11.
+ * @processing - ongoing active processing function
+ * @tee_op_handle - handle on active crypto operation or TEE_HANDLE_NULL
+ * @proc_id - SKS ID of the active processing
+ * @proc_params - parameters saved in memory for the active processing
+ * @find_ctx - point to active search context (null if no active search)
+ */
+struct pkcs11_session {
+	TAILQ_ENTRY(pkcs11_session) link;
+	struct object_list object_list;
+	struct ck_token *token;
+	uintptr_t tee_session;
+	uint32_t handle;
+	bool readwrite;
+	uint32_t state;
+	enum pkcs11_session_processing processing;
+	TEE_OperationHandle tee_op_handle;
+	uint32_t proc_id;
+	void *proc_params;
 };
 
 /* Initialize static token instance(s) from default/persistent database */
@@ -110,6 +168,39 @@ struct ck_token *init_token_db(unsigned int token_id);
 /* Persistent database update */
 int update_persistent_db(struct ck_token *token, size_t offset, size_t size);
 void close_persistent_db(struct ck_token *token);
+
+/*
+ * Pkcs11 session support
+ */
+void ck_token_close_tee_session(uintptr_t tee_session);
+struct pkcs11_session *sks_handle2session(uint32_t client_handle);
+
+int set_pkcs_session_processing_state(struct pkcs11_session *session,
+				      enum pkcs11_session_processing state);
+
+int check_pkcs_session_processing_state(struct pkcs11_session *session,
+					enum pkcs11_session_processing state);
+
+bool pkcs11_session_is_read_write(struct pkcs11_session *session);
+
+static inline
+struct object_list *pkcs11_get_session_objects(struct pkcs11_session *session)
+{
+	return &session->object_list;
+}
+
+static inline
+bool pkcs11_session_is_security_officer(struct pkcs11_session *session)
+{
+	return session->token->login_state ==
+		PKCS11_TOKEN_STATE_SECURITY_OFFICER;
+}
+
+static inline
+struct ck_token *pkcs11_session2token(struct pkcs11_session *session)
+{
+	return session->token;
+}
 
 /*
  * Entry point for the TA commands

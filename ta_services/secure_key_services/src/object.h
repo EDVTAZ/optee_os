@@ -12,8 +12,22 @@
 struct pkcs11_session;
 
 struct sks_object {
-	int foo;
+	LIST_ENTRY(sks_object) link;
+	void *session_owner;
 };
+
+LIST_HEAD(object_list, sks_object);
+
+/*
+ * destroy_object - destroy an SKS object
+ *
+ * @session - session requesting object destruction
+ * @object - reference to the sks object
+ * @session_object_only - true is only session object shall be destroyed
+ */
+uint32_t destroy_object(struct pkcs11_session *session,
+			struct sks_object *object,
+			bool session_object_only);
 
 /*
  * Entry function called from the SKS command parser

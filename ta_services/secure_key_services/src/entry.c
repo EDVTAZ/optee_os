@@ -54,6 +54,7 @@ void TA_CloseSessionEntryPoint(void *session)
 {
 	uintptr_t sess_hld = (uintptr_t)session;
 
+	ck_token_close_tee_session(sess_hld);
 	TEE_Free(handle_put(&sks_session_db, sess_hld));
 }
 
@@ -90,7 +91,7 @@ static uint32_t entry_ping(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
  * will be force to TEE_SUCCESS. Note that some Cryptoki error status are
  * sent straight through TEE result code. See sks2tee_noerr().
  */
-TEE_Result TA_InvokeCommandEntryPoint(void *tee_session __unused, uint32_t cmd,
+TEE_Result TA_InvokeCommandEntryPoint(void *tee_session, uint32_t cmd,
 				      uint32_t ptypes,
 				      TEE_Param params[TEE_NUM_PARAMS])
 {

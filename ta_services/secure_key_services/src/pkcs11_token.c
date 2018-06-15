@@ -7,10 +7,12 @@
 #include <sks_ta.h>
 #include <string.h>
 #include <string_ext.h>
+#include <sys/queue.h>
 #include <tee_internal_api_extensions.h>
 #include <util.h>
 
 #include "handle.h"
+#include "object.h"
 #include "pkcs11_token.h"
 #include "serializer.h"
 #include "sks_helpers.h"
@@ -20,6 +22,8 @@
 
 /* Static allocation of tokens runtime instances (reset to 0 at load) */
 struct ck_token ck_token[TOKEN_COUNT];
+
+static struct handle_db session_handle_db = HANDLE_DB_INITIALIZER;
 
 /* Static allocation of tokens runtime instances */
 struct ck_token *get_token(unsigned int token_id)
@@ -49,6 +53,10 @@ static int pkcs11_token_init(unsigned int id)
 
 	/* Initialize the token runtime state */
 	token->login_state = PKCS11_TOKEN_STATE_PUBLIC_SESSIONS;
+	token->session_state = PKCS11_TOKEN_STATE_SESSION_NONE;
+	TAILQ_INIT(&token->session_list);
+	TEE_MemFill(&token->session_handle_db, 0,
+		    sizeof(token->session_handle_db));
 
 	return 0;
 }
@@ -70,6 +78,106 @@ void pkcs11_deinit(void)
 
 	for (id = 0; id < TOKEN_COUNT; id++)
 		close_persistent_db(get_token(id));
+}
+
+bool pkcs11_session_is_read_write(struct pkcs11_session *session)
+{
+	if (!session->readwrite)
+		return false;
+
+	if (session->token->session_state ==
+	    PKCS11_TOKEN_STATE_SESSION_READ_ONLY)
+		return false;
+
+	switch (session->token->login_state) {
+	case PKCS11_TOKEN_STATE_INVALID:
+	case PKCS11_TOKEN_STATE_SECURITY_OFFICER:
+		return false;
+	case PKCS11_TOKEN_STATE_PUBLIC_SESSIONS:
+	case PKCS11_TOKEN_STATE_USER_SESSIONS:
+	case PKCS11_TOKEN_STATE_CONTEXT_SPECIFIC:
+		break;
+	default:
+		TEE_Panic(0);
+	}
+
+	return true;
+}
+
+struct pkcs11_session *sks_handle2session(uint32_t handle)
+{
+	return handle_lookup(&session_handle_db, (int)handle);
+}
+
+/*
+ * PKCS#11 expects an session must finalize (or cancel) an operation
+ * before starting a new one.
+ *
+ * enum pkcs11_session_processing provides the valid operation states for a
+ * PKCS#11 session.
+ *
+ * set_pkcs_session_processing_state() changes the session operation state.
+ *
+ * check_pkcs_session_processing_state() checks the session is in the expected
+ * operation state.
+ */
+int set_pkcs_session_processing_state(struct pkcs11_session *pkcs_session,
+				      enum pkcs11_session_processing state)
+{
+	if (!pkcs_session)
+		return 1;
+
+	if (pkcs_session->processing == PKCS11_SESSION_READY ||
+	    state == PKCS11_SESSION_READY) {
+		pkcs_session->processing = state;
+		return 0;
+	}
+
+	/* Allowed transitions on dual disgest/cipher or authen/cipher */
+	switch (state) {
+	case PKCS11_SESSION_DIGESTING_ENCRYPTING:
+		if (pkcs_session->processing == PKCS11_SESSION_ENCRYPTING ||
+		    pkcs_session->processing == PKCS11_SESSION_DIGESTING) {
+			pkcs_session->processing = state;
+			return 0;
+		}
+		break;
+	case PKCS11_SESSION_DECRYPTING_DIGESTING:
+		if (pkcs_session->processing == PKCS11_SESSION_DECRYPTING ||
+		    pkcs_session->processing == PKCS11_SESSION_DIGESTING) {
+			pkcs_session->processing = state;
+			return 0;
+		}
+		break;
+	case PKCS11_SESSION_SIGNING_ENCRYPTING:
+		if (pkcs_session->processing == PKCS11_SESSION_ENCRYPTING ||
+		    pkcs_session->processing == PKCS11_SESSION_SIGNING) {
+			pkcs_session->processing = state;
+			return 0;
+		}
+		break;
+	case PKCS11_SESSION_DECRYPTING_VERIFYING:
+		if (pkcs_session->processing == PKCS11_SESSION_DECRYPTING ||
+		    pkcs_session->processing == PKCS11_SESSION_VERIFYING) {
+			pkcs_session->processing = state;
+			return 0;
+		}
+		break;
+	default:
+		break;
+	}
+
+	/* Transition not allowed */
+	return 1;
+}
+
+int check_pkcs_session_processing_state(struct pkcs11_session *pkcs_session,
+					enum pkcs11_session_processing state)
+{
+	if (!pkcs_session)
+		return 1;
+
+	return (pkcs_session->processing == state) ? 0 : 1;
 }
 
 static void cipher_pin(TEE_ObjectHandle key_handle, uint8_t *buf, size_t len)
@@ -143,6 +251,11 @@ uint32_t entry_ck_token_initialize(TEE_Param *ctrl,
 	if (token->db_main->flags & SKS_CKFT_SO_PIN_LOCKED) {
 		IMSG("Token SO PIN is locked");
 		return SKS_CKR_PIN_LOCKED;
+	}
+
+	if (!TAILQ_EMPTY(&token->session_list)) {
+		IMSG("SO cannot log in, pending session(s)");
+		return SKS_CKR_SESSION_EXISTS;
 	}
 
 	cpin = TEE_Malloc(SKS_TOKEN_PIN_SIZE, TEE_MALLOC_FILL_ZERO);
@@ -457,12 +570,14 @@ uint32_t entry_ck_token_mecha_info(TEE_Param *ctrl,
 }
 
 /* ctrl=[slot-id], in=unused, out=[session-handle] */
-uint32_t entry_ck_token_ro_session(uintptr_t __unused teesess, TEE_Param *ctrl,
-				   TEE_Param *in, TEE_Param *out)
+static uint32_t ck_token_session(uintptr_t teesess, TEE_Param *ctrl,
+				 TEE_Param *in, TEE_Param *out, bool readonly)
 {
 	uint32_t rv;
 	struct serialargs ctrlargs;
 	uint32_t token_id;
+	struct ck_token *token;
+	struct pkcs11_session *session;
 
 	if (!ctrl || in || !out)
 		return SKS_BAD_PARAM;
@@ -473,56 +588,132 @@ uint32_t entry_ck_token_ro_session(uintptr_t __unused teesess, TEE_Param *ctrl,
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	token = get_token(token_id);
+	if (!token)
+		return SKS_CKR_SLOT_ID_INVALID;
+
+	if (readonly &&
+	    token->login_state == PKCS11_TOKEN_STATE_SECURITY_OFFICER &&
+	    token->session_state == PKCS11_TOKEN_STATE_SESSION_READ_WRITE)
+		return SKS_CKR_SESSION_READ_WRITE_SO_EXISTS;
+
+	session = TEE_Malloc(sizeof(*session), 0);
+	if (!session)
+		return SKS_MEMORY;
+
+	session->handle = handle_get(&session_handle_db, session);
+	session->tee_session = teesess;
+	session->processing = PKCS11_SESSION_READY;
+	session->tee_op_handle = TEE_HANDLE_NULL;
+	session->readwrite = !readonly;
+	session->token = token;
+	session->proc_id = SKS_UNDEFINED_ID;
+	LIST_INIT(&session->object_list);
+
+	if (readonly)
+		token->session_state = PKCS11_TOKEN_STATE_SESSION_READ_ONLY;
+
+	TAILQ_INSERT_HEAD(&token->session_list, session, link);
+
+	*(uint32_t *)out->memref.buffer = session->handle;
+	out->memref.size = sizeof(uint32_t);
+
+	return SKS_OK;
 }
 
 /* ctrl=[slot-id], in=unused, out=[session-handle] */
-uint32_t entry_ck_token_rw_session(uintptr_t __unused teesess, TEE_Param *ctrl,
+uint32_t entry_ck_token_ro_session(uintptr_t teesess, TEE_Param *ctrl,
 				   TEE_Param *in, TEE_Param *out)
 {
-	uint32_t rv;
-	struct serialargs ctrlargs;
-	uint32_t token_id;
+	return ck_token_session(teesess, ctrl, in, out, true);
+}
 
-	if (!ctrl || in || !out)
-		return SKS_BAD_PARAM;
+/* ctrl=[slot-id], in=unused, out=[session-handle] */
+uint32_t entry_ck_token_rw_session(uintptr_t teesess, TEE_Param *ctrl,
+				   TEE_Param *in, TEE_Param *out)
+{
+	return ck_token_session(teesess, ctrl, in, out, false);
+}
 
-	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
+static void close_ck_session(struct pkcs11_session *session)
+{
+	struct ck_token *token = session->token;
 
-	rv = serialargs_get(&ctrlargs, &token_id, sizeof(uint32_t));
-	if (rv)
-		return rv;
+	(void)handle_put(&session_handle_db, session->handle);
 
-	return SKS_NOT_IMPLEMENTED;
+	if (session->tee_op_handle != TEE_HANDLE_NULL)
+		TEE_FreeOperation(session->tee_op_handle);
+
+	while (!LIST_EMPTY(&session->object_list))
+		destroy_object(session, LIST_FIRST(&session->object_list),
+				true);
+
+	TAILQ_REMOVE(&token->session_list, session, link);
+
+	/* Closing last read-only session switches token to read/write state */
+	if (!session->readwrite) {
+		struct pkcs11_session *sess;
+		bool last_ro = true;
+		bool last = true;
+
+		TAILQ_FOREACH(sess, &session->token->session_list, link) {
+			last = false;
+
+			if (sess->readwrite)
+				continue;
+
+			last_ro = false;
+		}
+
+		if (last)
+			session->token->session_state =
+					PKCS11_TOKEN_STATE_SESSION_NONE;
+		else if (last_ro)
+			session->token->session_state =
+					PKCS11_TOKEN_STATE_SESSION_READ_WRITE;
+	}
+
+	if (TAILQ_EMPTY(&session->token->session_list))
+		session->token->login_state =
+					PKCS11_TOKEN_STATE_PUBLIC_SESSIONS;
+
+	TEE_Free(session);
 }
 
 /* ctrl=[session-handle], in=unused, out=unused */
-uint32_t entry_ck_token_close_session(uintptr_t __unused teesess,
-				      TEE_Param *ctrl, TEE_Param *in,
-				      TEE_Param *out)
+uint32_t entry_ck_token_close_session(uintptr_t teesess, TEE_Param *ctrl,
+				      TEE_Param *in, TEE_Param *out)
 {
 	uint32_t rv;
 	struct serialargs ctrlargs;
-	uint32_t handle;
+	uint32_t session_handle;
+	struct pkcs11_session *session;
 
 	if (!ctrl || in || out || ctrl->memref.size < sizeof(uint32_t))
 		return SKS_BAD_PARAM;
 
 	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
 
-	rv = serialargs_get(&ctrlargs, &handle, sizeof(uint32_t));
+	rv = serialargs_get(&ctrlargs, &session_handle, sizeof(uint32_t));
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	session = sks_handle2session(session_handle);
+	if (!session || session->tee_session != teesess)
+		return SKS_CKR_SESSION_HANDLE_INVALID;
+
+	close_ck_session(session);
+
+	return SKS_OK;
 }
 
-uint32_t entry_ck_token_close_all(uintptr_t __unused teesess, TEE_Param *ctrl,
+uint32_t entry_ck_token_close_all(uintptr_t teesess __unused, TEE_Param *ctrl,
 				  TEE_Param *in, TEE_Param *out)
 {
 	uint32_t rv;
 	struct serialargs ctrlargs;
 	uint32_t token_id;
+	struct ck_token *token;
 
 	if (!ctrl || in || out)
 		return SKS_BAD_PARAM;
@@ -533,5 +724,35 @@ uint32_t entry_ck_token_close_all(uintptr_t __unused teesess, TEE_Param *ctrl,
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	token = get_token(token_id);
+	if (!token)
+		return SKS_CKR_SLOT_ID_INVALID;
+
+	while (!TAILQ_EMPTY(&token->session_list))
+		close_ck_session(TAILQ_FIRST(&token->session_list));
+
+	return SKS_OK;
+}
+
+/*
+ * Parse all tokens and all sessions. Close all sessions that are relying
+ * on the target TEE session ID which is being closed by caller.
+ */
+void ck_token_close_tee_session(uintptr_t tee_session)
+{
+	struct ck_token *token;
+	struct pkcs11_session *session;
+	struct pkcs11_session *next;
+	int n;
+
+	for (n = 0; n < TOKEN_COUNT; n++) {
+		token = get_token(n);
+		if (!token)
+			continue;
+
+		TAILQ_FOREACH_SAFE(session, &token->session_list, link, next) {
+			if (session->tee_session == tee_session)
+				close_ck_session(session);
+		}
+	}
 }
