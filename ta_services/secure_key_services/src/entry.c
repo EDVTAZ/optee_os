@@ -8,7 +8,16 @@
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
 
+#include "handle.h"
+#include "pkcs11_token.h"
 #include "sks_helpers.h"
+
+/* Client session context: currently only use the alloced address */
+struct tee_session {
+	int foo;
+};
+
+static struct handle_db sks_session_db = HANDLE_DB_INITIALIZER;
 
 TEE_Result TA_CreateEntryPoint(void)
 {
@@ -23,13 +32,23 @@ TEE_Result TA_OpenSessionEntryPoint(uint32_t __unused param_types,
 				    TEE_Param __unused params[4],
 				    void **session)
 {
-	*session = NULL;
+	struct tee_session *sess = TEE_Malloc(sizeof(*sess), 0);
+	uintptr_t sess_hld;
+
+	if (!sess)
+		return TEE_ERROR_OUT_OF_MEMORY;
+
+	sess_hld = handle_get(&sks_session_db, sess);
+	*session = (void *)sess_hld;
 
 	return TEE_SUCCESS;
 }
 
-void TA_CloseSessionEntryPoint(void *session __unused)
+void TA_CloseSessionEntryPoint(void *session)
 {
+	uintptr_t sess_hld = (uintptr_t)session;
+
+	TEE_Free(handle_put(&sks_session_db, sess_hld));
 }
 
 static uint32_t entry_ping(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
@@ -65,7 +84,7 @@ static uint32_t entry_ping(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
  * will be force to TEE_SUCCESS. Note that some Cryptoki error status are
  * sent straight through TEE result code. See sks2tee_noerr().
  */
-TEE_Result TA_InvokeCommandEntryPoint(void *session __unused, uint32_t cmd,
+TEE_Result TA_InvokeCommandEntryPoint(void *tee_session __unused, uint32_t cmd,
 				      uint32_t ptypes,
 				      TEE_Param params[TEE_NUM_PARAMS])
 {
@@ -103,6 +122,26 @@ TEE_Result TA_InvokeCommandEntryPoint(void *session __unused, uint32_t cmd,
 	switch (cmd) {
 	case SKS_CMD_PING:
 		rc = entry_ping(ctrl, in, out);
+		break;
+
+	case SKS_CMD_CK_SLOT_LIST:
+		rc = entry_ck_slot_list(ctrl, in, out);
+		break;
+	case SKS_CMD_CK_SLOT_INFO:
+		rc = entry_ck_slot_info(ctrl, in, out);
+		break;
+	case SKS_CMD_CK_TOKEN_INFO:
+		rc = entry_ck_token_info(ctrl, in, out);
+		break;
+	case SKS_CMD_CK_INIT_TOKEN:
+		rc = entry_ck_token_initialize(ctrl, in, out);
+		break;
+
+	case SKS_CMD_CK_MECHANISM_IDS:
+		rc = entry_ck_token_mecha_ids(ctrl, in, out);
+		break;
+	case SKS_CMD_CK_MECHANISM_INFO:
+		rc = entry_ck_token_mecha_info(ctrl, in, out);
 		break;
 
 	default:
