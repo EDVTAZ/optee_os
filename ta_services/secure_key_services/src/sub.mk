@@ -5,3 +5,4 @@ srcs-y += serializer.c
 srcs-y += pkcs11_token.c
 srcs-y += object.c
 srcs-y += processing.c
+srcs-y += persistent_token.c

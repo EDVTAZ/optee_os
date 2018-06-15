@@ -3,8 +3,10 @@
  * Copyright (c) 2017-2018, Linaro Limited
  */
 
+#include <assert.h>
 #include <sks_ta.h>
 #include <string.h>
+#include <string_ext.h>
 #include <tee_internal_api_extensions.h>
 #include <util.h>
 
@@ -12,6 +14,89 @@
 #include "pkcs11_token.h"
 #include "serializer.h"
 #include "sks_helpers.h"
+
+/* Provide 3 slots/tokens, ID is token index */
+#define TOKEN_COUNT	3
+
+/* Static allocation of tokens runtime instances (reset to 0 at load) */
+struct ck_token ck_token[TOKEN_COUNT];
+
+/* Static allocation of tokens runtime instances */
+struct ck_token *get_token(unsigned int token_id)
+{
+	if (token_id > TOKEN_COUNT)
+		return NULL;
+
+	return &ck_token[token_id];
+}
+
+unsigned int get_token_id(struct ck_token *token)
+{
+	assert(token >= ck_token && token < &ck_token[TOKEN_COUNT]);
+
+	return token - ck_token;
+}
+
+static int pkcs11_token_init(unsigned int id)
+{
+	struct ck_token *token = init_token_db(id);
+
+	if (!token)
+		return 1;
+
+	if (token->login_state != PKCS11_TOKEN_STATE_INVALID)
+		return 0;
+
+	/* Initialize the token runtime state */
+	token->login_state = PKCS11_TOKEN_STATE_PUBLIC_SESSIONS;
+
+	return 0;
+}
+
+int pkcs11_init(void)
+{
+	unsigned int id;
+
+	for (id = 0; id < TOKEN_COUNT; id++)
+		if (pkcs11_token_init(id))
+			return 1;
+
+	return 0;
+}
+
+void pkcs11_deinit(void)
+{
+	unsigned int id;
+
+	for (id = 0; id < TOKEN_COUNT; id++)
+		close_persistent_db(get_token(id));
+}
+
+static void cipher_pin(TEE_ObjectHandle key_handle, uint8_t *buf, size_t len)
+{
+	uint8_t iv[16] = { 0 };
+	uint32_t size = len;
+	TEE_OperationHandle tee_op_handle = TEE_HANDLE_NULL;
+	TEE_Result res;
+
+	res = TEE_AllocateOperation(&tee_op_handle,
+				    TEE_ALG_AES_CBC_NOPAD,
+				    TEE_MODE_ENCRYPT, 128);
+	if (res)
+		TEE_Panic(0);
+
+	res = TEE_SetOperationKey(tee_op_handle, key_handle);
+	if (res)
+		TEE_Panic(0);
+
+	TEE_CipherInit(tee_op_handle, iv, sizeof(iv));
+
+	res = TEE_CipherDoFinal(tee_op_handle, buf, len, buf, &size);
+	if (res || size != SKS_TOKEN_PIN_SIZE)
+		TEE_Panic(0);
+
+	TEE_FreeOperation(tee_op_handle);
+}
 
 /* ctrl=[slot-id][pin-size][pin][label], in=unused, out=unused */
 uint32_t entry_ck_token_initialize(TEE_Param *ctrl,
@@ -23,6 +108,9 @@ uint32_t entry_ck_token_initialize(TEE_Param *ctrl,
 	uint32_t pin_size;
 	void *pin;
 	char label[32 + 1];
+	struct ck_token *token;
+	uint8_t *cpin = NULL;
+	int pin_rc;
 
 	if (!ctrl || in || out)
 		return SKS_BAD_PARAM;
@@ -45,15 +133,116 @@ uint32_t entry_ck_token_initialize(TEE_Param *ctrl,
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	if (pin_size > SKS_TOKEN_PIN_SIZE)
+		return SKS_FAILED;
+
+	token = get_token(token_id);
+	if (!token)
+		return SKS_CKR_SLOT_ID_INVALID;
+
+	if (token->db_main->flags & SKS_CKFT_SO_PIN_LOCKED) {
+		IMSG("Token SO PIN is locked");
+		return SKS_CKR_PIN_LOCKED;
+	}
+
+	cpin = TEE_Malloc(SKS_TOKEN_PIN_SIZE, TEE_MALLOC_FILL_ZERO);
+	TEE_MemMove(cpin, pin, pin_size);
+	cipher_pin(token->pin_hdl[0], cpin, SKS_TOKEN_PIN_SIZE);
+
+	if (!token->db_main->so_pin_size) {
+		TEE_MemMove(token->db_main->so_pin, cpin, SKS_TOKEN_PIN_SIZE);
+		token->db_main->so_pin_size = pin_size;
+
+		update_persistent_db(token,
+				     offsetof(struct token_persistent_main,
+					      so_pin),
+				     sizeof(token->db_main->so_pin));
+		update_persistent_db(token,
+				     offsetof(struct token_persistent_main,
+					      so_pin_size),
+				     sizeof(token->db_main->so_pin_size));
+
+		goto inited;
+	}
+
+	pin_rc = 0;
+	if (token->db_main->so_pin_size != pin_size)
+		pin_rc = 1;
+	if (buf_compare_ct(token->db_main->so_pin, cpin,
+			   SKS_TOKEN_PIN_SIZE))
+		pin_rc = 1;
+
+	if (pin_rc) {
+		token->db_main->flags |= SKS_CKFT_SO_PIN_COUNT_LOW;
+		token->db_main->so_pin_count++;
+
+		if (token->db_main->so_pin_count == 6)
+			token->db_main->flags |= SKS_CKFT_SO_PIN_FINAL_TRY;
+		if (token->db_main->so_pin_count == 7)
+			token->db_main->flags |= SKS_CKFT_SO_PIN_LOCKED;
+
+		update_persistent_db(token,
+				     offsetof(struct token_persistent_main,
+					      flags),
+				     sizeof(token->db_main->flags));
+		update_persistent_db(token,
+				     offsetof(struct token_persistent_main,
+					      so_pin_count),
+				     sizeof(token->db_main->so_pin_count));
+
+		TEE_Free(cpin);
+		return SKS_CKR_PIN_INCORRECT;
+	}
+
+	token->db_main->flags &= ~(SKS_CKFT_SO_PIN_COUNT_LOW |
+				   SKS_CKFT_SO_PIN_FINAL_TRY);
+	token->db_main->so_pin_count = 0;
+
+inited:
+	TEE_MemMove(token->db_main->label, label, SKS_TOKEN_LABEL_SIZE);
+	token->db_main->flags |= SKS_CKFT_TOKEN_INITIALIZED;
+
+	update_persistent_db(token,
+			     offsetof(struct token_persistent_main, label),
+			     sizeof(token->db_main->label));
+
+	update_persistent_db(token,
+			     offsetof(struct token_persistent_main,
+				      so_pin_count),
+			     sizeof(token->db_main->so_pin_count));
+
+	update_persistent_db(token,
+			     offsetof(struct token_persistent_main, flags),
+			     sizeof(token->db_main->flags));
+
+	label[32] = '\0';
+	IMSG("Token \"%s\" is happy to be initilialized", label);
+
+	TEE_Free(cpin);
+
+	return SKS_OK;
 }
 
 uint32_t entry_ck_slot_list(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
 {
+	const size_t out_size = sizeof(uint32_t) * TOKEN_COUNT;
+	uint32_t *id;
+	unsigned int n;
+
 	if (ctrl || in || !out)
 		return SKS_BAD_PARAM;
 
-	return SKS_NOT_IMPLEMENTED;
+	if (out->memref.size < out_size) {
+		out->memref.size = out_size;
+		return SKS_SHORT_BUFFER;
+	}
+
+	for (id = out->memref.buffer, n = 0; n < TOKEN_COUNT; n++, id++)
+		*id = (uint32_t)n;
+
+	out->memref.size = out_size;
+
+	return SKS_OK;
 }
 
 uint32_t entry_ck_slot_info(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
@@ -61,9 +250,20 @@ uint32_t entry_ck_slot_info(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
 	uint32_t rv;
 	struct serialargs ctrlargs;
 	uint32_t token_id;
+	struct ck_token *token;
+	const char desc[] = SKS_CRYPTOKI_SLOT_DESCRIPTION;
+	const char manuf[] = SKS_CRYPTOKI_SLOT_MANUFACTURER;
+	const char hwver[2] = SKS_CRYPTOKI_SLOT_HW_VERSION;
+	const char fwver[2] = SKS_CRYPTOKI_SLOT_FW_VERSION;
+	struct sks_slot_info info;
 
 	if (!ctrl || in || !out)
 		return SKS_BAD_PARAM;
+
+	if (out->memref.size < sizeof(struct sks_slot_info)) {
+		out->memref.size = sizeof(struct sks_slot_info);
+		return SKS_SHORT_BUFFER;
+	}
 
 	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
 
@@ -71,7 +271,26 @@ uint32_t entry_ck_slot_info(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	token = get_token(token_id);
+	if (!token)
+		return SKS_CKR_SLOT_ID_INVALID;
+
+	TEE_MemFill(&info, 0, sizeof(info));
+
+	PADDED_STRING_COPY(info.slotDescription, desc);
+	PADDED_STRING_COPY(info.manufacturerID, manuf);
+
+	info.flags |= SKS_CKFS_TOKEN_PRESENT;
+	info.flags |= SKS_CKFS_REMOVABLE_DEVICE;
+	info.flags &= ~SKS_CKFS_HW_SLOT;
+
+	TEE_MemMove(&info.hardwareVersion, &hwver, sizeof(hwver));
+	TEE_MemMove(&info.firmwareVersion, &fwver, sizeof(fwver));
+
+	out->memref.size = sizeof(struct sks_slot_info);
+	TEE_MemMove(out->memref.buffer, &info, out->memref.size);
+
+	return SKS_OK;
 }
 
 uint32_t entry_ck_token_info(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
@@ -79,9 +298,21 @@ uint32_t entry_ck_token_info(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
 	uint32_t rv;
 	struct serialargs ctrlargs;
 	uint32_t token_id;
+	struct ck_token *token;
+	const char manuf[] = SKS_CRYPTOKI_TOKEN_MANUFACTURER;
+	const char sernu[] = SKS_CRYPTOKI_TOKEN_SERIAL_NUMBER;
+	const char model[] = SKS_CRYPTOKI_TOKEN_MODEL;
+	const char hwver[] = SKS_CRYPTOKI_TOKEN_HW_VERSION;
+	const char fwver[] = SKS_CRYPTOKI_TOKEN_FW_VERSION;
+	struct sks_token_info info;
 
 	if (!ctrl || in || !out)
 		return SKS_BAD_PARAM;
+
+	if (out->memref.size < sizeof(struct sks_token_info)) {
+		out->memref.size = sizeof(struct sks_token_info);
+		return SKS_SHORT_BUFFER;
+	}
 
 	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
 
@@ -89,7 +320,40 @@ uint32_t entry_ck_token_info(TEE_Param *ctrl, TEE_Param *in, TEE_Param *out)
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	token = get_token(token_id);
+	if (!token)
+		return SKS_CKR_SLOT_ID_INVALID;
+
+	TEE_MemFill(&info, 0, sizeof(info));
+
+	PADDED_STRING_COPY(info.label, token->db_main->label);
+	PADDED_STRING_COPY(info.manufacturerID, manuf);
+	PADDED_STRING_COPY(info.model, model);
+	PADDED_STRING_COPY(info.serialNumber, sernu);
+
+	info.flags = token->db_main->flags;
+
+	info.ulMaxSessionCount = ~0;
+	info.ulSessionCount = ~0;
+	info.ulMaxRwSessionCount = ~0;
+	info.ulRwSessionCount = ~0;
+	info.ulMaxPinLen = 128;
+	info.ulMinPinLen = 10;
+	info.ulTotalPublicMemory = ~0;
+	info.ulFreePublicMemory = ~0;
+	info.ulTotalPrivateMemory = ~0;
+	info.ulFreePrivateMemory = ~0;
+
+	TEE_MemMove(&info.hardwareVersion, &hwver, sizeof(hwver));
+	TEE_MemMove(&info.firmwareVersion, &fwver, sizeof(hwver));
+
+	/* Need to get time and convert into YYYYMMDDhhmmss UTC format */
+	TEE_MemFill(info.utcTime, 0, sizeof(info.utcTime));
+
+	/* Return to caller with data */
+	TEE_MemMove(out->memref.buffer, &info, sizeof(info));
+
+	return SKS_OK;
 }
 
 uint32_t entry_ck_token_mecha_ids(TEE_Param *ctrl,
@@ -98,9 +362,24 @@ uint32_t entry_ck_token_mecha_ids(TEE_Param *ctrl,
 	uint32_t rv;
 	struct serialargs ctrlargs;
 	uint32_t token_id;
+	struct ck_token *token;
+	const uint32_t mecha_list[] = {
+		SKS_CKM_AES_ECB,
+		SKS_CKM_AES_CBC,
+		SKS_CKM_AES_CBC_PAD,
+		SKS_CKM_AES_CTS,
+		SKS_CKM_AES_CTR,
+		SKS_CKM_AES_GCM,
+		SKS_CKM_AES_CCM,
+	};
 
 	if (!ctrl || in || !out)
 		return SKS_BAD_PARAM;
+
+	if (out->memref.size < sizeof(mecha_list)) {
+		out->memref.size = sizeof(mecha_list);
+		return SKS_SHORT_BUFFER;
+	}
 
 	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
 
@@ -108,7 +387,14 @@ uint32_t entry_ck_token_mecha_ids(TEE_Param *ctrl,
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	token = get_token(token_id);
+	if (!token)
+		return SKS_CKR_SLOT_ID_INVALID;
+
+	out->memref.size = sizeof(mecha_list);
+	TEE_MemMove(out->memref.buffer, mecha_list, sizeof(mecha_list));
+
+	return SKS_OK;
 }
 
 uint32_t entry_ck_token_mecha_info(TEE_Param *ctrl,
@@ -118,9 +404,16 @@ uint32_t entry_ck_token_mecha_info(TEE_Param *ctrl,
 	struct serialargs ctrlargs;
 	uint32_t token_id;
 	uint32_t type;
+	struct ck_token *token;
+	struct sks_mechanism_info info;
 
 	if (!ctrl || in || !out)
 		return SKS_BAD_PARAM;
+
+	if (out->memref.size < sizeof(info)) {
+		out->memref.size = sizeof(info);
+		return SKS_SHORT_BUFFER;
+	}
 
 	serialargs_init(&ctrlargs, ctrl->memref.buffer, ctrl->memref.size);
 
@@ -132,7 +425,35 @@ uint32_t entry_ck_token_mecha_info(TEE_Param *ctrl,
 	if (rv)
 		return rv;
 
-	return SKS_NOT_IMPLEMENTED;
+	token = get_token(token_id);
+	if (!token)
+		return SKS_CKR_SLOT_ID_INVALID;
+
+	TEE_MemFill(&info, 0, sizeof(info));
+
+	switch (type) {
+	case SKS_CKM_AES_GCM:
+	case SKS_CKM_AES_CCM:
+		info.flags |= SKS_CKFM_SIGN | SKS_CKFM_VERIFY;
+	case SKS_CKM_AES_ECB:
+	case SKS_CKM_AES_CBC:
+	case SKS_CKM_AES_CBC_PAD:
+	case SKS_CKM_AES_CTS:
+	case SKS_CKM_AES_CTR:
+		info.flags |= SKS_CKFM_ENCRYPT | SKS_CKFM_DECRYPT |
+			     SKS_CKFM_WRAP | SKS_CKFM_UNWRAP | SKS_CKFM_DERIVE;
+		info.min_key_size = 128;
+		info.max_key_size = 256;
+		break;
+
+	default:
+		break;
+	}
+
+	out->memref.size = sizeof(info);
+	TEE_MemMove(out->memref.buffer, &info, sizeof(info));
+
+	return SKS_OK;
 }
 
 /* ctrl=[slot-id], in=unused, out=[session-handle] */

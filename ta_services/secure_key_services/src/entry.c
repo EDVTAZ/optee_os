@@ -23,11 +23,15 @@ static struct handle_db sks_session_db = HANDLE_DB_INITIALIZER;
 
 TEE_Result TA_CreateEntryPoint(void)
 {
+	if (pkcs11_init())
+		return TEE_ERROR_SECURITY;
+
 	return TEE_SUCCESS;
 }
 
 void TA_DestroyEntryPoint(void)
 {
+	pkcs11_deinit();
 }
 
 TEE_Result TA_OpenSessionEntryPoint(uint32_t __unused param_types,
