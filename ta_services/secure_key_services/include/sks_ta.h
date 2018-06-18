@@ -662,4 +662,114 @@ struct sks_attr_head {
 #define SKS_CKK_SHA384_HMAC			0x006
 #define SKS_CKK_SHA512_HMAC			0x007
 
+/*
+ * Valid values for attribute SKS_CKA_MECHANISM_TYPE
+ * SKS_CKM_<x> corresponds to cryptoki CKM_<x>.
+ */
+#define SKS_CKM_AES_ECB				0x000
+#define SKS_CKM_AES_CBC				0x001
+#define SKS_CKM_AES_CBC_PAD			0x002
+#define SKS_CKM_AES_CTS				0x003
+#define SKS_CKM_AES_CTR				0x004
+#define SKS_CKM_AES_GCM				0x005
+#define SKS_CKM_AES_CCM				0x006
+#define SKS_CKM_AES_GMAC			0x007
+#define SKS_CKM_AES_CMAC			0x008
+#define SKS_CKM_AES_CMAC_GENERAL		0x009
+#define SKS_CKM_AES_ECB_ENCRYPT_DATA		0x00a
+#define SKS_CKM_AES_CBC_ENCRYPT_DATA		0x00b
+#define SKS_CKM_AES_KEY_GEN			0x00c
+#define SKS_CKM_GENERIC_SECRET_KEY_GEN		0x00d
+#define SKS_CKM_MD5_HMAC			0x00e
+#define SKS_CKM_SHA_1_HMAC			0x00f
+#define SKS_CKM_SHA224_HMAC			0x010
+#define SKS_CKM_SHA256_HMAC			0x011
+#define SKS_CKM_SHA384_HMAC			0x012
+#define SKS_CKM_SHA512_HMAC			0x013
+#define SKS_CKM_AES_XCBC_MAC			0x014
+/* SKS added IDs for operation without cryptoki mechanism ID defined */
+#define SKS_PROCESSING_IMPORT			0x1000
+#define SKS_PROCESSING_COPY			0x1001
+
+/*
+ * Processing parameters
+ *
+ * These can hardly be described by ANSI-C structures since some field of the
+ * structure have a size specify by a previous field. Therefore the format of
+ * the parameter binary data for each supported processing is define here from
+ * this comment rather than using C structures. Processing parameters are used
+ * as argument the C_EncryptInit and friends using the struct sks_reference
+ * format where field 'type' is the SKS processing ID and field 'size' is the
+ * parameter byte size. Below is shown the head struct sks_reference fields
+ * and the trailling data (the effective parameters binary blob).
+ *
+ * AES ECB
+ *   head:	32bit type = SKS_CKM_AES_ECB
+ *		32bit params byte size = 0
+ *
+ * AES CBC, CBC_NOPAD and CTS
+ *   head:	32bit type = SKS_CKM_AES_CBC
+ *			  or SKS_CKM_AES_CBC_PAD
+ *			  or SKS_CKM_AES_CTS
+ *		32bit params byte size = 16
+ *  params:	16byte IV
+ *
+ * AES CTR
+ *   head:	32bit type = SKS_CKM_AES_CTR
+ *		32bit params byte size = 20
+ *  params:	32bit counter bit increment
+ *		16byte IV
+ *
+ * AES GCM
+ *   head:	32bit type = SKS_CKM_AES_GCM
+ *		32bit params byte size
+ *  params:	32bit IV_byte_size
+ *		byte array: IV (IV_byte_size bytes)
+ *		32bit AAD_byte_size
+ *		byte array: AAD data (AAD_byte_size bytes)
+ *		32bit tag bit size
+ *
+ * AES CCM
+ *   head:	32bit type = SKS_CKM_AES_CCM
+ *		32bit params byte size
+ *  params:	32bit data_byte_size
+ *		32bit nonce_byte_size
+ *		byte array: nonce data (nonce_byte_size bytes)
+ *		32bit AAD_byte_size
+ *		byte array: AAD data (AAD_byte_size bytes)
+ *		32bit MAC byte size
+ *
+ * AES GMAC
+ *   head:	32bit type = SKS_CKM_AES_GMAC
+ *		32bit params byte size = 12
+ *  params:	12byte IV
+
+ * AES CMAC with general length
+ *   head:	32bit type = SKS_CKM_AES_CMAC_GENERAL
+ *		32bit params byte size = 12
+ *  params:	32bit byte size of the output CMAC data
+ *
+ * AES CMAC fixed size (16byte CMAC)
+ *   head:	32bit type = SKS_CKM_AES_CMAC_GENERAL
+ *		32bit size = 0
+ *
+ * AES derive by ECB
+ *   head:	32bit type = SKS_CKM_AES_ECB_ENCRYPT_DATA
+ *		32bit params byte size
+ *  params:	32bit byte size of the data to encrypt
+ *		byte array: data to encrypt
+ *
+ * AES derive by CBC
+ *   head:	32bit type = SKS_CKM_AES_CBC_ENCRYPT_DATA
+ *		32bit params byte size
+ *  params:	16byte IV
+ *		32bit byte size of the data to encrypt
+ *		byte array: data to encrypt
+ *
+ * AES and generic secret generation
+ *   head:	32bit type = SKS_CKM_AES_KEY_GEN
+ *			  or SKS_CKM_GENERIC_SECRET_KEY_GEN
+ *		32bit size = 0
+ */
+
 #endif /*__SKS_TA_H__*/

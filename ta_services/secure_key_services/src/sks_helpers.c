@@ -195,6 +195,53 @@ static const struct string_id __maybe_unused string_key_type[] = {
 	SKS_ID(SKS_CKK_SHA512_HMAC),
 	SKS_ID(SKS_UNDEFINED_ID)
 };
+
+static const struct string_id __maybe_unused string_processing[] = {
+	SKS_ID(SKS_CKM_AES_ECB),
+	SKS_ID(SKS_CKM_AES_CBC),
+	SKS_ID(SKS_CKM_AES_CBC_PAD),
+	SKS_ID(SKS_CKM_AES_CTR),
+	SKS_ID(SKS_CKM_AES_GCM),
+	SKS_ID(SKS_CKM_AES_CCM),
+	SKS_ID(SKS_CKM_AES_CTS),
+	SKS_ID(SKS_CKM_AES_GMAC),
+	SKS_ID(SKS_CKM_AES_CMAC),
+	SKS_ID(SKS_CKM_AES_CMAC_GENERAL),
+	SKS_ID(SKS_CKM_AES_ECB_ENCRYPT_DATA),
+	SKS_ID(SKS_CKM_AES_CBC_ENCRYPT_DATA),
+	SKS_ID(SKS_CKM_AES_KEY_GEN),
+	SKS_ID(SKS_CKM_GENERIC_SECRET_KEY_GEN),
+	SKS_ID(SKS_CKM_MD5_HMAC),
+	SKS_ID(SKS_CKM_SHA_1_HMAC),
+	SKS_ID(SKS_CKM_SHA224_HMAC),
+	SKS_ID(SKS_CKM_SHA256_HMAC),
+	SKS_ID(SKS_CKM_SHA384_HMAC),
+	SKS_ID(SKS_CKM_SHA512_HMAC),
+	SKS_ID(SKS_CKM_AES_XCBC_MAC),
+	SKS_ID(SKS_UNDEFINED_ID)
+};
+
+/* Processing IDs not exported in the TA API */
+static const struct string_id __maybe_unused string_internal_processing[] = {
+	SKS_ID(SKS_PROCESSING_IMPORT),
+	SKS_ID(SKS_PROCESSING_COPY),
+};
+
+static const struct string_id __maybe_unused string_proc_flags[] = {
+	SKS_ID(SKS_CKFM_HW),
+	SKS_ID(SKS_CKFM_ENCRYPT),
+	SKS_ID(SKS_CKFM_DECRYPT),
+	SKS_ID(SKS_CKFM_DIGEST),
+	SKS_ID(SKS_CKFM_SIGN),
+	SKS_ID(SKS_CKFM_SIGN_RECOVER),
+	SKS_ID(SKS_CKFM_VERIFY),
+	SKS_ID(SKS_CKFM_VERIFY_RECOVER),
+	SKS_ID(SKS_CKFM_GENERATE),
+	SKS_ID(SKS_CKFM_GENERATE_PAIR),
+	SKS_ID(SKS_CKFM_WRAP),
+	SKS_ID(SKS_CKFM_UNWRAP),
+	SKS_ID(SKS_CKFM_DERIVE),
+};
 #endif /*CFG_TEE_TA_LOG_LEVEL*/
 
 /*
@@ -411,6 +458,21 @@ const char *sks2str_boolprop(uint32_t id)
 		return sks2str_attr(id);
 
 	return unknown;
+}
+
+const char *sks2str_proc(uint32_t id)
+{
+	const char *str = ID2STR(id, string_internal_processing, "SKS_PROC_");
+
+	if (str != unknown)
+		return str;
+
+	return ID2STR(id, string_processing, "SKS_CKM_");
+}
+
+const char *sks2str_proc_flag(uint32_t id)
+{
+	return ID2STR(id, string_proc_flags, "SKS_CKFM_");
 }
 
 const char *sks2str_rc(uint32_t id)
